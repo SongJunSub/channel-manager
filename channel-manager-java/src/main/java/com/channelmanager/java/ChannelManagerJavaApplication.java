@@ -10,8 +10,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication; // Spring B
 @SpringBootApplication
 public class ChannelManagerJavaApplication { // Spring Boot 진입점 클래스
 
-  // 애플리케이션의 메인 메서드 - JVM이 이 메서드를 실행하여 Spring Boot를 시작한다
-  public static void main(String[] args) {
-    SpringApplication.run(ChannelManagerJavaApplication.class, args); // Spring Boot 애플리케이션 시작
-  }
+    // 애플리케이션의 메인 메서드 - JVM이 이 메서드를 실행하여 Spring Boot를 시작한다
+    // Java 25부터 main 메서드에 public 수식자가 불필요하다 (JEP 477)
+    static void main(String[] args) {
+        SpringApplication.run(ChannelManagerJavaApplication.class, args); // Spring Boot 애플리케이션 시작
+    }
 }
