@@ -640,6 +640,509 @@ CREATE INDEX idx_channel_events_created ON channel_events(created_at);
 
 ---
 
+## 8. 실무 코드 비교: JPA + QueryDSL vs R2DBC + DatabaseClient
+
+이 장에서는 실제 호텔 CRS(Central Reservation System) 프로젝트의 `ProfileQueryRepository.findProfiles()` 메서드를 분석하고,
+동일한 패턴을 R2DBC + DatabaseClient로 어떻게 전환하는지 비교한다.
+
+### 8-1. 원본 코드 분석 (JPA + QueryDSL)
+
+CRS 프로젝트의 `findProfiles()`는 프로필 목록을 조회하는 메서드이다.
+다수의 LEFT JOIN, 동적 조건, 서브쿼리, 페이징을 포함하는 **실무에서 흔히 볼 수 있는 복잡한 쿼리**이다.
+
+```java
+// === CRS 프로젝트 원본: JPA + QueryDSL 방식 ===
+
+@Repository
+@RequiredArgsConstructor
+public class ProfileQueryRepository {
+
+    private final JPAQueryFactory queryFactory;  // QueryDSL의 쿼리 팩토리 (블로킹)
+
+    public Page<ProfilesResponseDto> findProfiles(ProfileParamVo paramVo) {
+        // 1. 페이징 정보 생성
+        PageRequest pageRequest = QueryUtils.createPageable(
+            paramVo.getPageNo(), paramVo.getPageSize(),
+            paramVo.getOrderBy(), paramVo.getOrderType()
+        );
+
+        // 2. 데이터 조회 쿼리 (블로킹 - 스레드가 결과 올 때까지 대기)
+        List<ProfilesResponseDto> content = queryFactory
+            .select(
+                Projections.bean(ProfilesResponseDto.class,  // DTO로 직접 매핑
+                    profile.id,
+                    profile.profileType,
+                    profile.mfResortProfileId,
+                    // 이름 결합: firstName + " " + lastName
+                    profile.individualName.nameFirst
+                        .concat(" ")
+                        .concat(profile.individualName.nameSur).as("engName"),
+                    profile.individualName.nameFirst.as("firstName"),
+                    profile.individualName.nameSur.as("lastName"),
+                    profile.individualName.namePrefix.as("namePrefix"),
+                    profile.dateOfBirth.as("birth"),
+                    profilePhoneNumber.phoneNumber.as("phone"),        // JOIN된 테이블 필드
+                    profileElectronicAddress.eAddress.as("email"),      // JOIN된 테이블 필드
+                    profilePostalAddress.countryCode.as("nationality"), // JOIN된 테이블 필드
+                    profile.gender,
+                    profileMembership.accountId.as("memberNo"),         // JOIN된 테이블 필드
+                    profileMembership.programCode.as("grade"),
+                    profileMembership.levelCode.as("level")
+                )
+            )
+            .from(profile)
+            // 대표 전화번호 JOIN (mfPrimaryYN = "Y")
+            .leftJoin(profilePhoneNumber)
+                .on(profilePhoneNumber.profile.eq(profile)
+                    .and(profilePhoneNumber.mfPrimaryYN.eq("Y")))
+            // 대표 이메일 JOIN
+            .leftJoin(profileElectronicAddress)
+                .on(profileElectronicAddress.profile.eq(profile)
+                    .and(profileElectronicAddress.mfPrimaryYN.eq("Y")))
+            // 대표 주소 JOIN
+            .leftJoin(profilePostalAddress)
+                .on(profilePostalAddress.profile.eq(profile)
+                    .and(profilePostalAddress.mfPrimaryYN.eq("Y")))
+            // 최신 멤버십 JOIN (복잡한 서브쿼리로 가장 최근 멤버십 1건 선택)
+            .leftJoin(profileMembership)
+                .on(profileMembership.profile.eq(profile)
+                    .and(profileMembership.mfInactiveDate.isNull())
+                    .and(profileMembership.programCode.isNotNull())
+                    .and(profileMembership.accountId.isNotNull())
+                    .and(profileMembership.id.eq(
+                        JPAExpressions.select(profileMembership.id.max())
+                            .from(profileMembership)
+                            .where(/* 최신 멤버십 필터 조건 */))))
+            // 동적 WHERE 조건 - null이면 해당 조건이 무시된다 (QueryDSL의 핵심 장점)
+            .where(
+                eqPropertyId(paramVo.getPropertyId()),           // propertyId가 null이면 조건 무시
+                eqProfileType(paramVo.getProfileType()),         // profileType이 null이면 조건 무시
+                eqMfResortProfileId(paramVo.getMfResortProfileId()),
+                eqMemberNo(paramVo.getMemberNo()),
+                eqFirstName(paramVo.getFirstName()),
+                eqLastName(paramVo.getLastName()),
+                eqProfilePhone(paramVo.getPhone()),
+                profile.mfInactiveDate.isNull()                  // 비활성 프로필 제외 (고정 조건)
+            )
+            .orderBy(profile.id.desc())
+            .offset(pageRequest.getOffset())
+            .limit(pageRequest.getPageSize())
+            .fetch();   // 블로킹 호출 - List<DTO> 반환
+
+        // 3. 전체 건수 조회 (블로킹)
+        Long total = queryFactory
+            .select(profile.count())
+            .from(profile)
+            .leftJoin(profilePhoneNumber)
+                .on(profilePhoneNumber.profile.eq(profile)
+                    .and(profilePhoneNumber.mfPrimaryYN.eq("Y")))
+            .where(/* 동일한 동적 조건 */)
+            .fetchOne();   // 블로킹 호출 - Long 반환
+
+        // 4. Page 객체로 감싸서 반환
+        return new PageImpl<>(content, pageRequest, total != null ? total : 0L);
+    }
+}
+```
+
+**동적 조건 클래스 (QueryDSL BooleanExpression 패턴):**
+
+```java
+// QueryDSL에서 동적 조건을 처리하는 표준 패턴
+// null을 반환하면 QueryDSL의 where()가 해당 조건을 자동으로 무시한다
+public class ProfileQueryCondition {
+
+    // propertyId가 null이면 null 반환 → 조건에서 제외
+    public static BooleanExpression eqPropertyId(Long propertyId) {
+        return propertyId == null ? null : profile.propertyId.eq(propertyId);
+    }
+
+    public static BooleanExpression eqProfileType(ProfileType profileType) {
+        return profileType == null ? null : profile.profileType.eq(profileType);
+    }
+
+    // 전화번호 조건 - 하이픈 제거 후 비교하는 복잡한 로직도 포함
+    public static BooleanExpression eqProfilePhone(String phone) {
+        if (phone == null) return null;
+        String normalizedPhone = phone.replace("-", "");
+        // 하이픈 포함/미포함 모두 매칭
+        return profilePhoneNumber.phoneNumber.eq(phone)
+            .or(profilePhoneNumber.phoneNumber.eq(normalizedPhone));
+    }
+
+    // 대소문자 무시 비교
+    public static BooleanExpression eqFirstName(String firstName) {
+        return firstName == null ? null
+            : profile.individualName.nameFirst.lower().eq(firstName.toLowerCase());
+    }
+
+    // EXISTS 서브쿼리를 사용하는 복잡한 조건
+    public static BooleanExpression eqMemberNo(String memberNo) {
+        return memberNo == null ? null : JPAExpressions.selectOne()
+            .from(profileMembership)
+            .where(profileMembership.profile.eq(profile)
+                .and(profileMembership.accountId.eq(memberNo))
+                .and(profileMembership.mfInactiveDate.isNull()))
+            .exists();
+    }
+}
+```
+
+### 8-2. R2DBC + DatabaseClient로 전환
+
+위 코드를 이 프로젝트(channel-manager)의 도메인에 맞게 R2DBC로 전환한다.
+`findProfiles()`의 패턴을 **예약 목록 조회 (`findReservations`)**로 매핑하여 비교한다.
+
+**도메인 매핑:**
+
+| CRS (Profile) | Channel Manager (Reservation) |
+|---|---|
+| Profile | Reservation |
+| ProfilePhoneNumber (LEFT JOIN) | Channel (LEFT JOIN) |
+| ProfileElectronicAddress (LEFT JOIN) | RoomType (LEFT JOIN) |
+| ProfileMembership (LEFT JOIN + 서브쿼리) | Inventory (LEFT JOIN) |
+| ProfileParamVo (검색 조건) | ReservationSearchParam (검색 조건) |
+| ProfilesResponseDto (응답 DTO) | ReservationListDto (응답 DTO) |
+
+#### Java (R2DBC + DatabaseClient)
+
+```java
+// === Channel Manager: R2DBC + DatabaseClient 방식 ===
+// 이 프로젝트에서 채택한 쿼리 작성 방식
+
+@Repository                                                        // Spring Bean 등록
+public class ReservationQueryRepository {
+
+    private final DatabaseClient databaseClient;                   // R2DBC의 쿼리 실행 클라이언트 (논블로킹)
+
+    public ReservationQueryRepository(DatabaseClient databaseClient) {
+        this.databaseClient = databaseClient;                      // 생성자 주입
+    }
+
+    // 예약 목록 조회 - 채널, 객실타입 JOIN + 동적 조건 + 페이징
+    // CRS의 findProfiles()와 동일한 패턴을 R2DBC로 표현한 메서드
+    // 반환 타입: Page<DTO> (블로킹) → Flux<DTO> (논블로킹)
+    public Flux<ReservationListDto> findReservations(ReservationSearchParam param) {
+
+        // 1. SQL을 직접 작성한다 (QueryDSL의 .select().from().leftJoin() 대신)
+        // QueryDSL: Projections.bean() → SQL: SELECT 절에 별칭 지정
+        // QueryDSL: .leftJoin().on() → SQL: LEFT JOIN ... ON
+        StringBuilder sql = new StringBuilder("""
+            SELECT r.id,
+                   r.guest_name,
+                   r.check_in_date,
+                   r.check_out_date,
+                   r.quantity,
+                   r.status,
+                   r.total_price,
+                   c.code AS channel_code,
+                   c.name AS channel_name,
+                   rt.name AS room_type_name,
+                   rt.base_price,
+                   i.available_quantity
+            FROM reservations r
+            LEFT JOIN channels c ON c.id = r.channel_id
+            LEFT JOIN room_types rt ON rt.id = r.room_type_id
+            LEFT JOIN inventories i ON i.room_type_id = r.room_type_id
+                AND i.stock_date = r.check_in_date
+            WHERE 1=1
+            """);
+        // WHERE 1=1: 동적 조건을 AND로 추가하기 위한 기법
+        // QueryDSL은 null 조건을 자동 무시하지만, Native SQL은 직접 분기해야 한다
+
+        // 2. 동적 조건 추가 (QueryDSL의 BooleanExpression 패턴 대신)
+        // CRS: eqPropertyId(paramVo.getPropertyId()) → null 반환 시 자동 무시
+        // R2DBC: if (param != null) 분기로 SQL에 조건 추가
+        Map<String, Object> binds = new HashMap<>();               // 바인드 파라미터를 담을 Map
+
+        // CRS의 eqProfileType()에 대응
+        if (param.getChannelId() != null) {                        // 채널 ID 조건 (null이면 무시)
+            sql.append(" AND r.channel_id = :channelId");          // SQL에 조건 추가
+            binds.put("channelId", param.getChannelId());          // 바인드 파라미터 등록
+        }
+
+        // CRS의 eqFirstName()에 대응 (대소문자 무시 검색)
+        if (param.getGuestName() != null) {                        // 투숙객 이름 조건
+            sql.append(" AND LOWER(r.guest_name) LIKE :guestName");// LOWER()로 대소문자 무시
+            binds.put("guestName",                                 // LIKE 패턴으로 부분 검색
+                "%" + param.getGuestName().toLowerCase() + "%");
+        }
+
+        if (param.getStatus() != null) {                          // 예약 상태 조건
+            sql.append(" AND r.status = :status");
+            binds.put("status", param.getStatus());
+        }
+
+        if (param.getRoomTypeId() != null) {                      // 객실 타입 조건
+            sql.append(" AND r.room_type_id = :roomTypeId");
+            binds.put("roomTypeId", param.getRoomTypeId());
+        }
+
+        if (param.getCheckInDate() != null) {                     // 체크인 날짜 조건
+            sql.append(" AND r.check_in_date >= :checkInDate");
+            binds.put("checkInDate", param.getCheckInDate());
+        }
+
+        if (param.getCheckOutDate() != null) {                    // 체크아웃 날짜 조건
+            sql.append(" AND r.check_out_date <= :checkOutDate");
+            binds.put("checkOutDate", param.getCheckOutDate());
+        }
+
+        // 3. 정렬 + 페이징 (QueryDSL의 .orderBy().offset().limit() 대신)
+        sql.append(" ORDER BY r.id DESC");                         // 최신순 정렬
+        sql.append(" LIMIT :limit OFFSET :offset");                // 페이징
+        binds.put("limit", param.getPageSize());                   // 페이지 크기
+        binds.put("offset",                                        // 시작 위치 계산
+            (long) param.getPageNo() * param.getPageSize());
+
+        // 4. 쿼리 실행 (블로킹 .fetch() 대신 논블로킹 .all())
+        DatabaseClient.GenericExecuteSpec spec = databaseClient.sql(sql.toString());
+
+        for (Map.Entry<String, Object> entry : binds.entrySet()) { // 바인드 파라미터 설정
+            spec = spec.bind(entry.getKey(), entry.getValue());
+        }
+
+        // QueryDSL의 Projections.bean() 대신 row.get()으로 수동 매핑
+        return spec.map((row, metadata) -> new ReservationListDto(
+            row.get("id", Long.class),                             // 예약 ID
+            row.get("guest_name", String.class),                   // 투숙객 이름
+            row.get("check_in_date", LocalDate.class),             // 체크인 날짜
+            row.get("check_out_date", LocalDate.class),            // 체크아웃 날짜
+            row.get("quantity", Integer.class),                    // 예약 객실 수
+            row.get("status", String.class),                       // 예약 상태
+            row.get("total_price", BigDecimal.class),              // 총 금액
+            row.get("channel_code", String.class),                 // 채널 코드 (JOIN)
+            row.get("channel_name", String.class),                 // 채널명 (JOIN)
+            row.get("room_type_name", String.class),               // 객실 타입명 (JOIN)
+            row.get("base_price", BigDecimal.class),               // 기본 가격 (JOIN)
+            row.get("available_quantity", Integer.class)            // 잔여 재고 (JOIN)
+        )).all();                                                  // Flux<DTO> 반환 (논블로킹)
+    }
+
+    // 전체 건수 조회 (CRS의 .select(profile.count()).fetchOne() 대신)
+    // 반환 타입: Long (블로킹) → Mono<Long> (논블로킹)
+    public Mono<Long> countReservations(ReservationSearchParam param) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM reservations r WHERE 1=1");
+
+        Map<String, Object> binds = new HashMap<>();
+
+        // findReservations와 동일한 동적 조건 적용
+        if (param.getChannelId() != null) {
+            sql.append(" AND r.channel_id = :channelId");
+            binds.put("channelId", param.getChannelId());
+        }
+        if (param.getStatus() != null) {
+            sql.append(" AND r.status = :status");
+            binds.put("status", param.getStatus());
+        }
+        // ... (동일한 조건들)
+
+        DatabaseClient.GenericExecuteSpec spec = databaseClient.sql(sql.toString());
+        for (Map.Entry<String, Object> entry : binds.entrySet()) {
+            spec = spec.bind(entry.getKey(), entry.getValue());
+        }
+
+        return spec.map(row -> row.get(0, Long.class))            // COUNT 결과를 Long으로 매핑
+            .one();                                                // Mono<Long> 반환
+    }
+}
+```
+
+#### Kotlin (R2DBC + DatabaseClient)
+
+```kotlin
+// === Channel Manager: Kotlin 버전 ===
+
+@Repository                                                        // Spring Bean 등록
+class ReservationQueryRepository(
+    private val databaseClient: DatabaseClient                     // 생성자 주입 (Kotlin primary constructor)
+) {
+
+    // 예약 목록 조회 - Kotlin의 문자열 템플릿과 buildString 활용
+    fun findReservations(param: ReservationSearchParam): Flux<ReservationListDto> {
+        val binds = mutableMapOf<String, Any>()                    // 바인드 파라미터 (mutableMap 사용)
+
+        // buildString으로 SQL 조합 (StringBuilder보다 간결한 Kotlin 관용구)
+        val sql = buildString {
+            append("""
+                SELECT r.id, r.guest_name, r.check_in_date, r.check_out_date,
+                       r.quantity, r.status, r.total_price,
+                       c.code AS channel_code, c.name AS channel_name,
+                       rt.name AS room_type_name, rt.base_price,
+                       i.available_quantity
+                FROM reservations r
+                LEFT JOIN channels c ON c.id = r.channel_id
+                LEFT JOIN room_types rt ON rt.id = r.room_type_id
+                LEFT JOIN inventories i ON i.room_type_id = r.room_type_id
+                    AND i.stock_date = r.check_in_date
+                WHERE 1=1
+            """.trimIndent())
+
+            // 동적 조건 - Kotlin의 ?.let으로 null 안전하게 처리
+            // CRS의 BooleanExpression eqProfileType()과 동일한 역할
+            param.channelId?.let {                                 // channelId가 null이 아닐 때만 실행
+                append(" AND r.channel_id = :channelId")
+                binds["channelId"] = it                            // 바인드 파라미터 등록
+            }
+
+            param.guestName?.let {                                 // 투숙객 이름 조건
+                append(" AND LOWER(r.guest_name) LIKE :guestName")
+                binds["guestName"] = "%${it.lowercase()}%"         // Kotlin 문자열 템플릿 사용
+            }
+
+            param.status?.let {                                    // 예약 상태 조건
+                append(" AND r.status = :status")
+                binds["status"] = it
+            }
+
+            param.roomTypeId?.let {                                // 객실 타입 조건
+                append(" AND r.room_type_id = :roomTypeId")
+                binds["roomTypeId"] = it
+            }
+
+            param.checkInDate?.let {                               // 체크인 날짜 조건
+                append(" AND r.check_in_date >= :checkInDate")
+                binds["checkInDate"] = it
+            }
+
+            param.checkOutDate?.let {                              // 체크아웃 날짜 조건
+                append(" AND r.check_out_date <= :checkOutDate")
+                binds["checkOutDate"] = it
+            }
+
+            // 페이징
+            append(" ORDER BY r.id DESC")
+            append(" LIMIT :limit OFFSET :offset")
+            binds["limit"] = param.pageSize                        // 페이지 크기
+            binds["offset"] = param.pageNo.toLong() * param.pageSize // 시작 위치
+        }
+
+        // 쿼리 실행 - Kotlin의 fold로 바인드 파라미터를 순차 적용
+        return binds.entries.fold(databaseClient.sql(sql)) { spec, (key, value) ->
+            spec.bind(key, value)                                  // 각 파라미터를 바인드
+        }.map { row, _ ->                                          // row 매핑 (metadata는 사용하지 않으므로 _)
+            ReservationListDto(
+                id = row.get("id", Long::class.java)!!,            // !! = null이 아님을 단언
+                guestName = row.get("guest_name", String::class.java)!!,
+                checkInDate = row.get("check_in_date", LocalDate::class.java)!!,
+                checkOutDate = row.get("check_out_date", LocalDate::class.java)!!,
+                quantity = row.get("quantity", Int::class.java)!!,
+                status = row.get("status", String::class.java)!!,
+                totalPrice = row.get("total_price", BigDecimal::class.java),
+                channelCode = row.get("channel_code", String::class.java),
+                channelName = row.get("channel_name", String::class.java),
+                roomTypeName = row.get("room_type_name", String::class.java),
+                basePrice = row.get("base_price", BigDecimal::class.java),
+                availableQuantity = row.get("available_quantity", Int::class.java)
+            )
+        }.all()                                                    // Flux<ReservationListDto> 반환
+    }
+
+    // 전체 건수 조회
+    fun countReservations(param: ReservationSearchParam): Mono<Long> {
+        // findReservations와 동일한 동적 조건 로직
+        // ...
+        return databaseClient.sql("SELECT COUNT(*) FROM reservations r WHERE 1=1 ...")
+            .map { row, _ -> row.get(0, Long::class.java)!! }     // COUNT 결과 매핑
+            .one()                                                 // Mono<Long> 반환
+    }
+}
+```
+
+### 8-3. 패턴별 상세 비교
+
+#### 동적 조건 처리
+
+```
+[JPA + QueryDSL]
+  BooleanExpression을 반환하는 static 메서드
+  → null 반환 시 where()가 자동 무시
+  → 타입 세이프 (컴파일 타임 체크)
+
+[R2DBC + DatabaseClient]
+  if (param != null) 분기로 SQL 문자열에 조건 추가
+  → 직접 null 체크 필요
+  → SQL 문자열 기반 (런타임 체크)
+```
+
+| 항목 | QueryDSL BooleanExpression | DatabaseClient 동적 조건 |
+|---|---|---|
+| null 처리 | `return null` → 자동 무시 | `if (param != null)` 분기 |
+| 타입 안전성 | 컴파일 타임 체크 | 런타임 체크 |
+| 재사용성 | static 메서드로 분리 | 헬퍼 메서드로 분리 가능 |
+| 서브쿼리 | `JPAExpressions` | SQL 서브쿼리 직접 작성 |
+
+#### JOIN 처리
+
+```
+[JPA + QueryDSL]
+  .leftJoin(profilePhoneNumber)
+      .on(profilePhoneNumber.profile.eq(profile)
+          .and(profilePhoneNumber.mfPrimaryYN.eq("Y")))
+  → 메서드 체인으로 표현
+  → Q클래스가 자동 생성
+
+[R2DBC + DatabaseClient]
+  LEFT JOIN channels c ON c.id = r.channel_id
+  → SQL을 직접 작성
+  → Q클래스 없음, 컬럼명 직접 지정
+```
+
+#### 반환 타입 비교
+
+```
+[JPA + QueryDSL]  (블로킹)
+  데이터: List<DTO>    ← .fetch()
+  건수:  Long          ← .fetchOne()
+  페이징: Page<DTO>    ← new PageImpl<>(content, pageable, total)
+
+[R2DBC + DatabaseClient]  (논블로킹)
+  데이터: Flux<DTO>    ← .all()
+  건수:  Mono<Long>    ← .one()
+  페이징: Mono<Page<DTO>> ← Mono.zip(data.collectList(), count).map(...)
+```
+
+#### R2DBC에서 Page 객체 조합하기
+
+```java
+// CRS 방식: 블로킹으로 단순 조합
+List<DTO> content = queryFactory.select(...).fetch();     // 블로킹
+Long total = queryFactory.select(count()).fetchOne();      // 블로킹
+return new PageImpl<>(content, pageRequest, total);        // 즉시 반환
+
+// R2DBC 방식: Reactive로 비동기 조합
+Mono<Page<ReservationListDto>> page = Mono.zip(
+    findReservations(param).collectList(),    // Flux → Mono<List> 변환
+    countReservations(param)                  // Mono<Long>
+).map(tuple -> new PageImpl<>(               // 두 결과가 모두 도착하면 조합
+    tuple.getT1(),                           // List<DTO>
+    PageRequest.of(param.getPageNo(), param.getPageSize()),
+    tuple.getT2()                            // total count
+));
+```
+
+### 8-4. 정리: R2DBC를 선택하면 포기하는 것과 얻는 것
+
+**포기하는 것:**
+- QueryDSL의 타입 세이프 쿼리 빌더 (Q클래스 자동 생성)
+- `BooleanExpression`의 null 자동 무시
+- `Projections.bean()`의 자동 DTO 매핑
+- Lazy Loading, 연관관계 자동 매핑
+
+**얻는 것:**
+- **논블로킹 I/O**: DB 쿼리 중 스레드를 점유하지 않음
+- **높은 동시성**: 적은 스레드로 많은 요청 처리
+- **Backpressure**: 소비자가 처리 속도를 제어
+- **스트리밍**: Flux로 대용량 데이터를 스트림 처리 가능 (SSE 등)
+
+**이 프로젝트의 선택:**
+- 복잡한 쿼리 → `DatabaseClient` + Native SQL (실무에서 가장 많이 사용)
+- 단순 CRUD → `ReactiveCrudRepository`
+- 고정 조건 쿼리 → `@Query` 어노테이션
+
+---
+
 ## 다음 단계
 
 이 개념을 바탕으로 Phase 1에서는 다음을 구현한다:
