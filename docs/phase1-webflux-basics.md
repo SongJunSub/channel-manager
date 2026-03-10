@@ -1,0 +1,652 @@
+# Phase 1: WebFlux & R2DBC 기본 개념
+
+## 목차
+1. [전통적인 웹 서버(Servlet) vs Reactive 웹 서버(WebFlux)](#1-전통적인-웹-서버servlet-vs-reactive-웹-서버webflux)
+2. [왜 Reactive가 필요한가?](#2-왜-reactive가-필요한가)
+3. [Reactor 핵심 개념: Mono와 Flux](#3-reactor-핵심-개념-mono와-flux)
+4. [R2DBC란 무엇인가?](#4-r2dbc란-무엇인가)
+5. [Spring Data R2DBC](#5-spring-data-r2dbc)
+6. [Flyway와 R2DBC](#6-flyway와-r2dbc)
+7. [도메인 모델 설계](#7-도메인-모델-설계)
+
+---
+
+## 1. 전통적인 웹 서버(Servlet) vs Reactive 웹 서버(WebFlux)
+
+### 1-1. Servlet 기반 (Spring MVC)
+
+전통적인 Spring MVC는 **Servlet** 위에서 동작한다.
+
+```
+[클라이언트 요청] → [톰캣 스레드 풀] → [스레드 1개가 요청 처리] → [응답 반환]
+```
+
+**동작 방식:**
+- 클라이언트가 HTTP 요청을 보내면, 서버는 **스레드 풀**에서 스레드 1개를 꺼내 그 요청에 할당한다.
+- 그 스레드는 요청 처리가 **완전히 끝날 때까지** 점유된다.
+- DB 조회, 외부 API 호출 등 I/O 작업이 있으면 스레드는 **결과가 올 때까지 대기(블로킹)** 한다.
+- 처리가 끝나면 응답을 반환하고, 스레드는 풀에 돌아간다.
+
+**문제점:**
+- 스레드 하나가 I/O 대기 중에도 **아무 일도 못 하고 묶여 있다.**
+- 동시 요청이 많아지면 스레드가 부족해지고, 새 요청은 **큐에서 대기**해야 한다.
+- 스레드를 늘리면 메모리 사용량이 급증한다. (스레드 1개 ≈ 1MB 스택 메모리)
+
+```
+예시: 스레드 풀 크기 = 200
+
+200개의 요청이 동시에 DB 조회(각 100ms)를 한다면?
+→ 200개의 스레드가 모두 100ms 동안 블로킹
+→ 201번째 요청은 스레드가 반환될 때까지 대기
+```
+
+### 1-2. Reactive 기반 (Spring WebFlux)
+
+Spring WebFlux는 **Netty** 위에서 동작하며, **이벤트 루프(Event Loop)** 방식을 사용한다.
+
+```
+[클라이언트 요청] → [이벤트 루프] → [작업 등록] → [I/O 완료 시 콜백] → [응답 반환]
+```
+
+**동작 방식:**
+- 소수의 스레드(보통 CPU 코어 수만큼)가 **이벤트 루프**를 돌며 요청을 받는다.
+- I/O 작업이 필요하면, 작업을 **등록만 하고 스레드를 반환**한다. (블로킹하지 않음)
+- I/O가 완료되면 **이벤트가 발생**하고, 이벤트 루프가 나머지 처리를 이어간다.
+- 스레드가 대기하지 않으므로, 적은 스레드로도 **수많은 동시 요청을 처리**할 수 있다.
+
+```
+예시: 이벤트 루프 스레드 = 8개 (8코어 CPU)
+
+1000개의 요청이 동시에 DB 조회를 한다면?
+→ 8개의 스레드가 1000개의 요청을 번갈아 처리
+→ I/O 대기 중인 요청의 스레드는 다른 요청 처리에 활용
+→ 스레드 부족 문제가 발생하지 않음
+```
+
+### 1-3. 비유로 이해하기
+
+| | Servlet (Spring MVC) | Reactive (WebFlux) |
+|---|---|---|
+| 비유 | **은행 창구** | **카페 주문** |
+| 설명 | 창구 직원이 한 고객의 업무가 끝날 때까지 붙어있음 | 주문받고 → 다음 손님 주문 → 음료 완성되면 호출 |
+| 스레드 | 요청당 1개 점유 | 소수 스레드가 이벤트 기반으로 처리 |
+| I/O 대기 | 스레드가 블로킹됨 | 스레드를 반환하고 완료 시 콜백 |
+| 장점 | 코드가 직관적, 디버깅 쉬움 | 높은 동시성, 적은 리소스 |
+| 단점 | 동시성 한계, 메모리 소비 큼 | 코드 복잡, 디버깅 어려움 |
+
+### 1-4. 언제 WebFlux를 쓰는가?
+
+**WebFlux가 적합한 경우:**
+- I/O 바운드 작업이 많은 경우 (DB 조회, 외부 API 호출 등)
+- 높은 동시 접속을 처리해야 하는 경우
+- SSE(Server-Sent Events), WebSocket 등 스트리밍이 필요한 경우
+- **← 이 프로젝트: 멀티 채널 실시간 예약 동기화**
+
+**Spring MVC가 적합한 경우:**
+- CPU 바운드 작업이 많은 경우 (복잡한 계산)
+- 팀이 Reactive에 익숙하지 않은 경우
+- 기존 블로킹 라이브러리를 많이 사용하는 경우
+
+---
+
+## 2. 왜 Reactive가 필요한가?
+
+### 2-1. Reactive Streams 표준
+
+Reactive Streams는 **비동기 스트림 처리의 표준 명세**이다. 다음 4개의 인터페이스로 구성된다.
+
+```java
+// 데이터를 발행하는 쪽
+public interface Publisher<T> {
+    void subscribe(Subscriber<? super T> s);
+}
+
+// 데이터를 수신하는 쪽
+public interface Subscriber<T> {
+    void onSubscribe(Subscription s);   // 구독 시작 시 호출
+    void onNext(T t);                   // 데이터가 도착할 때마다 호출
+    void onError(Throwable t);          // 에러 발생 시 호출
+    void onComplete();                  // 모든 데이터 발행 완료 시 호출
+}
+
+// 구독을 제어하는 연결 고리
+public interface Subscription {
+    void request(long n);               // n개의 데이터를 요청 (Backpressure)
+    void cancel();                      // 구독 취소
+}
+
+// Publisher이면서 Subscriber인 중간 처리자
+public interface Processor<T, R> extends Subscriber<T>, Publisher<R> {
+}
+```
+
+### 2-2. Backpressure (배압)
+
+Backpressure는 **수신자가 발행자에게 "나 지금 이만큼만 처리할 수 있어"라고 알려주는 메커니즘**이다.
+
+```
+[빠른 생산자] ──데이터──→ [느린 소비자]
+
+Backpressure 없을 때:
+  생산자가 초당 1000개 → 소비자가 초당 100개 처리 → 메모리 폭발 💥
+
+Backpressure 있을 때:
+  소비자: "10개만 보내줘" → 생산자: 10개 전송 → 소비자 처리 완료 → "다음 10개 보내줘"
+```
+
+**이 프로젝트에서의 의미:**
+- 여러 채널(OTA_A, OTA_B)에서 예약이 동시에 쏟아질 때
+- 시스템이 처리할 수 있는 만큼만 받아서 처리
+- 메모리 과부하 방지
+
+### 2-3. Reactive 프로그래밍의 핵심 원칙
+
+1. **비동기(Asynchronous):** 작업 완료를 기다리지 않고 다음 작업을 진행한다.
+2. **논블로킹(Non-blocking):** 스레드를 점유하지 않고 I/O 완료 이벤트를 기다린다.
+3. **데이터 스트림(Data Stream):** 데이터를 하나의 흐름(스트림)으로 처리한다.
+4. **Backpressure:** 소비자가 처리 속도를 제어한다.
+
+---
+
+## 3. Reactor 핵심 개념: Mono와 Flux
+
+Spring WebFlux는 **Project Reactor** 라이브러리를 사용한다. Reactor는 Reactive Streams 명세의 구현체이다.
+
+### 3-1. Mono: 0개 또는 1개의 데이터
+
+`Mono<T>`는 **최대 1개의 데이터**를 발행하는 Publisher이다.
+
+```
+Mono<T>:  ──[데이터 0~1개]──|  (완료)
+                            또는
+           ──[에러]──X        (에러)
+```
+
+**사용 시점:**
+- DB에서 1건 조회 (findById)
+- 1건 저장/수정/삭제
+- 외부 API 단건 호출
+
+```kotlin
+// Kotlin 예시
+fun findHotelById(id: Long): Mono<Hotel> {
+    return hotelRepository.findById(id)  // 결과가 0개(없음) 또는 1개
+}
+```
+
+```java
+// Java 예시
+public Mono<Hotel> findHotelById(Long id) {
+    return hotelRepository.findById(id); // 결과가 0개(없음) 또는 1개
+}
+```
+
+### 3-2. Flux: 0개 ~ N개의 데이터
+
+`Flux<T>`는 **0개부터 무한개까지**의 데이터를 발행하는 Publisher이다.
+
+```
+Flux<T>:  ──[1]──[2]──[3]──...──[N]──|  (완료)
+                                       또는
+           ──[1]──[2]──[에러]──X        (에러)
+```
+
+**사용 시점:**
+- DB에서 여러 건 조회 (findAll)
+- 실시간 이벤트 스트림 (SSE)
+- 주기적 데이터 발행 (Flux.interval)
+
+```kotlin
+// Kotlin 예시
+fun findAllHotels(): Flux<Hotel> {
+    return hotelRepository.findAll()  // 0개 ~ N개의 호텔 목록
+}
+```
+
+```java
+// Java 예시
+public Flux<Hotel> findAllHotels() {
+    return hotelRepository.findAll(); // 0개 ~ N개의 호텔 목록
+}
+```
+
+### 3-3. 핵심 연산자 (Operator)
+
+Mono와 Flux는 데이터를 변환하고 조합하는 다양한 **연산자**를 제공한다.
+
+#### 변환 (Transforming)
+
+```kotlin
+// map: 데이터를 1:1 변환
+Mono.just("hello")
+    .map { it.uppercase() }        // "HELLO"
+
+// flatMap: 데이터를 비동기 변환 (Publisher 반환)
+Mono.just(1L)
+    .flatMap { id -> hotelRepository.findById(id) }  // Mono<Hotel>
+```
+
+**map vs flatMap 차이:**
+```
+map:     [A] → 동기 변환 → [B]              (값 → 값)
+flatMap: [A] → 비동기 변환 → Mono<B> → [B]   (값 → Publisher → 값)
+```
+
+- `map`: 단순 변환 (문자열 변환, 타입 변환 등)
+- `flatMap`: DB 조회, API 호출 등 비동기 작업이 필요할 때
+
+#### 필터링 (Filtering)
+
+```kotlin
+// filter: 조건에 맞는 데이터만 통과
+Flux.just(1, 2, 3, 4, 5)
+    .filter { it % 2 == 0 }        // 2, 4
+```
+
+#### 조합 (Combining)
+
+```kotlin
+// zip: 여러 Publisher의 결과를 조합
+Mono.zip(
+    hotelRepository.findById(1L),          // Mono<Hotel>
+    roomTypeRepository.findByHotelId(1L)   // Flux<RoomType> → collectList → Mono<List>
+).map { tuple ->
+    HotelDetail(tuple.t1, tuple.t2)        // 두 결과를 합쳐서 새 객체 생성
+}
+```
+
+#### 에러 처리 (Error Handling)
+
+```kotlin
+// onErrorReturn: 에러 시 기본값 반환
+hotelRepository.findById(id)
+    .onErrorReturn(Hotel.empty())
+
+// onErrorResume: 에러 시 대체 Publisher로 전환
+hotelRepository.findById(id)
+    .onErrorResume { error ->
+        Mono.error(NotFoundException("Hotel not found: $id"))
+    }
+```
+
+### 3-4. 구독 (Subscribe) - 아무도 구독하지 않으면 아무 일도 일어나지 않는다
+
+**가장 중요한 개념:** Mono와 Flux는 **구독(subscribe)하기 전까지 아무 일도 하지 않는다.**
+
+```kotlin
+// ❌ 이 코드는 아무 일도 하지 않는다!
+hotelRepository.findById(1L)    // Mono를 만들었지만 구독하지 않음
+
+// ✅ 구독해야 실제로 실행된다
+hotelRepository.findById(1L)
+    .subscribe { hotel -> println(hotel) }
+```
+
+**Spring WebFlux에서는 프레임워크가 자동으로 구독한다:**
+```kotlin
+@GetMapping("/hotels/{id}")
+fun getHotel(@PathVariable id: Long): Mono<Hotel> {
+    return hotelRepository.findById(id)   // 반환만 하면 WebFlux가 자동 구독
+}
+```
+
+### 3-5. Cold vs Hot Publisher
+
+```
+Cold Publisher (차가운 발행자):
+- 구독할 때마다 처음부터 데이터를 발행한다.
+- 예: DB 조회 → 구독자마다 각각 쿼리 실행
+- Mono.just(), Flux.fromIterable() 등
+
+Hot Publisher (뜨거운 발행자):
+- 구독 여부와 관계없이 데이터를 발행한다.
+- 구독 시점 이후의 데이터만 수신한다.
+- 예: 실시간 이벤트 스트림 → Phase 5에서 SSE에 활용
+- Sinks, Flux.share() 등
+```
+
+---
+
+## 4. R2DBC란 무엇인가?
+
+### 4-1. JDBC vs R2DBC
+
+**JDBC (Java Database Connectivity):**
+```
+[애플리케이션] → [JDBC 드라이버] → [DB]
+                  ↑ 블로킹!
+                  스레드가 쿼리 결과 올 때까지 대기
+```
+
+- 전통적인 DB 접근 방식
+- **동기/블로킹**: 쿼리를 보내고 결과가 올 때까지 스레드가 대기
+- Spring MVC + JPA/MyBatis에서 사용
+
+**R2DBC (Reactive Relational Database Connectivity):**
+```
+[애플리케이션] → [R2DBC 드라이버] → [DB]
+                  ↑ 논블로킹!
+                  쿼리 보내고 스레드 반환, 결과 오면 콜백
+```
+
+- Reactive를 위한 DB 접근 방식
+- **비동기/논블로킹**: 쿼리를 보내고 스레드를 반환, 결과가 오면 이벤트로 처리
+- Spring WebFlux + Spring Data R2DBC에서 사용
+
+### 4-2. 왜 R2DBC가 필요한가?
+
+WebFlux에서 JDBC를 사용하면 **Reactive의 의미가 없어진다:**
+
+```
+[요청] → [이벤트 루프 스레드] → [JDBC 호출] → 스레드 블로킹! → Reactive 장점 상실
+```
+
+WebFlux의 논블로킹 파이프라인을 끝까지 유지하려면, DB 접근도 논블로킹이어야 한다.
+이것이 R2DBC가 존재하는 이유이다.
+
+### 4-3. R2DBC의 특징
+
+| 항목 | JDBC | R2DBC |
+|---|---|---|
+| 처리 방식 | 동기/블로킹 | 비동기/논블로킹 |
+| 반환 타입 | `List<T>`, `T` | `Flux<T>`, `Mono<T>` |
+| 커넥션 풀 | HikariCP | r2dbc-pool |
+| ORM | JPA/Hibernate | Spring Data R2DBC (경량) |
+| Lazy Loading | 지원 | 미지원 |
+| 연관관계 매핑 | `@OneToMany` 등 | 직접 처리 |
+| 트랜잭션 | `@Transactional` | `@Transactional` (Reactive 버전) |
+
+### 4-4. R2DBC의 제한사항
+
+R2DBC는 JPA에 비해 **기능이 제한적**이다. 이는 의도적인 설계이다.
+
+1. **Lazy Loading 없음:** 연관 엔티티를 자동으로 불러오지 않는다.
+2. **연관관계 매핑 없음:** `@OneToMany`, `@ManyToOne` 같은 어노테이션이 없다.
+3. **캐시 없음:** JPA의 1차/2차 캐시가 없다.
+4. **스키마 자동 생성 없음:** `ddl-auto`가 없으므로 Flyway 등을 사용해야 한다.
+
+**왜 이런 제한이 있는가?**
+- Reactive의 핵심은 **논블로킹**이다.
+- Lazy Loading은 내부적으로 추가 쿼리를 블로킹으로 실행하므로, Reactive와 맞지 않다.
+- 대신, 필요한 데이터를 **명시적으로 조회**하고 **조합**하는 방식을 사용한다.
+
+```kotlin
+// JPA 방식 (Lazy Loading으로 자동 로딩)
+val hotel = hotelRepository.findById(1L)
+val roomTypes = hotel.roomTypes  // 자동으로 추가 쿼리 실행 (블로킹)
+
+// R2DBC 방식 (명시적으로 조회하고 조합)
+hotelRepository.findById(1L)
+    .flatMap { hotel ->
+        roomTypeRepository.findByHotelId(hotel.id!!)
+            .collectList()
+            .map { roomTypes -> HotelDetail(hotel, roomTypes) }
+    }
+```
+
+---
+
+## 5. Spring Data R2DBC
+
+### 5-1. 의존성
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-webflux")    // WebFlux
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc") // Spring Data R2DBC
+    runtimeOnly("org.postgresql:r2dbc-postgresql")                            // PostgreSQL R2DBC 드라이버
+}
+```
+
+### 5-2. 설정
+
+```yaml
+# application.yml
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/channel_manager
+    username: postgres
+    password: postgres
+```
+
+**URL 형식 차이:**
+```
+JDBC:  jdbc:postgresql://localhost:5432/channel_manager
+R2DBC: r2dbc:postgresql://localhost:5432/channel_manager
+```
+
+### 5-3. 엔티티 정의
+
+```kotlin
+// Kotlin
+@Table("hotels")                           // 매핑할 테이블명
+data class Hotel(
+    @Id                                    // PK 지정
+    val id: Long? = null,                  // null이면 새 엔티티 (INSERT), 아니면 기존 엔티티 (UPDATE)
+    val name: String,                      // 호텔명
+    val address: String,                   // 주소
+    @CreatedDate                           // 생성 시각 자동 기록
+    val createdAt: LocalDateTime? = null
+)
+```
+
+```java
+// Java
+@Table("hotels")                            // 매핑할 테이블명
+public class Hotel {
+    @Id                                     // PK 지정
+    private Long id;                        // null이면 새 엔티티 (INSERT)
+    private String name;                    // 호텔명
+    private String address;                 // 주소
+    @CreatedDate                            // 생성 시각 자동 기록
+    private LocalDateTime createdAt;
+}
+```
+
+### 5-4. Repository 정의
+
+```kotlin
+// Kotlin
+interface HotelRepository : ReactiveCrudRepository<Hotel, Long> {
+    // 기본 제공 메서드:
+    // findById(id): Mono<Hotel>
+    // findAll(): Flux<Hotel>
+    // save(entity): Mono<Hotel>
+    // deleteById(id): Mono<Void>
+
+    // 커스텀 쿼리 메서드
+    fun findByName(name: String): Mono<Hotel>
+}
+```
+
+```java
+// Java
+public interface HotelRepository extends ReactiveCrudRepository<Hotel, Long> {
+    Mono<Hotel> findByName(String name);
+}
+```
+
+**주목:** JPA의 `JpaRepository`와 달리 `ReactiveCrudRepository`를 상속한다.
+반환 타입이 `List<T>` 대신 `Flux<T>`, `T` 대신 `Mono<T>`이다.
+
+---
+
+## 6. Flyway와 R2DBC
+
+### 6-1. 왜 Flyway가 필요한가?
+
+R2DBC는 JPA의 `ddl-auto` 기능이 없다. 테이블을 자동으로 생성/수정해주지 않으므로, **DB 마이그레이션 도구**가 필요하다.
+
+**Flyway**는 SQL 파일 기반의 DB 마이그레이션 도구이다.
+- 버전 관리된 SQL 파일을 순서대로 실행한다.
+- 이미 실행된 마이그레이션은 다시 실행하지 않는다.
+- `flyway_schema_history` 테이블로 실행 이력을 관리한다.
+
+### 6-2. 마이그레이션 파일 규칙
+
+```
+src/main/resources/db/migration/
+├── V1__create_hotels_table.sql        # 버전 1: 호텔 테이블 생성
+├── V2__create_room_types_table.sql    # 버전 2: 객실 타입 테이블 생성
+├── V3__create_inventories_table.sql   # 버전 3: 재고 테이블 생성
+└── ...
+```
+
+**파일명 규칙:** `V{버전}__{설명}.sql`
+- `V` 접두사 필수
+- 버전 번호 (정수, 순서대로)
+- `__` 더블 언더스코어 구분자
+- 설명 (snake_case)
+
+### 6-3. Flyway + R2DBC 통합
+
+Flyway 자체는 JDBC 기반이므로, R2DBC 프로젝트에서는 **JDBC 드라이버를 추가로 포함**해야 한다.
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    // R2DBC (애플리케이션 런타임)
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
+    runtimeOnly("org.postgresql:r2dbc-postgresql")
+
+    // Flyway (마이그레이션 실행용, JDBC 필요)
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    runtimeOnly("org.postgresql:postgresql")  // JDBC 드라이버 (Flyway용)
+}
+```
+
+**동작 흐름:**
+```
+애플리케이션 시작
+  → Flyway가 JDBC로 마이그레이션 실행 (테이블 생성/수정)
+  → 이후 애플리케이션은 R2DBC로 데이터 접근 (논블로킹)
+```
+
+---
+
+## 7. 도메인 모델 설계
+
+### 7-1. 이 프로젝트의 도메인
+
+호텔 멀티 채널 예약 동기화 시스템의 핵심 엔티티들이다.
+
+```
+[Hotel] 1 ──── N [RoomType] 1 ──── N [Inventory]
+                                          |
+                                          N
+                                     [Reservation]
+                                          |
+[Channel] ────────────────────────────────┘
+
+[ChannelEvent] ← 모든 변경사항을 이벤트로 기록
+```
+
+### 7-2. 엔티티 설명
+
+| 엔티티 | 설명 | 예시 |
+|---|---|---|
+| **Hotel** | 호텔 정보 | 서울 그랜드 호텔 |
+| **RoomType** | 객실 타입 | Standard, Deluxe, Suite |
+| **Inventory** | 날짜별/객실타입별 재고 | 2026-03-15 Deluxe 잔여 5개 |
+| **Channel** | 판매 채널 | DIRECT(자사), OTA_A, OTA_B |
+| **Reservation** | 예약 정보 | 채널, 객실, 날짜, 수량, 상태 |
+| **ChannelEvent** | 변경 이벤트 | 재고 변경, 예약 생성/취소 등 |
+
+### 7-3. 테이블 설계
+
+```sql
+-- 호텔
+CREATE TABLE hotels (
+    id          BIGSERIAL PRIMARY KEY,       -- 호텔 PK (자동 증가)
+    name        VARCHAR(200) NOT NULL,       -- 호텔명
+    address     VARCHAR(500),                -- 주소
+    created_at  TIMESTAMP DEFAULT NOW()      -- 생성 시각
+);
+
+-- 객실 타입
+CREATE TABLE room_types (
+    id          BIGSERIAL PRIMARY KEY,       -- 객실 타입 PK
+    hotel_id    BIGINT NOT NULL,             -- 호텔 FK
+    name        VARCHAR(100) NOT NULL,       -- 객실 타입명 (Standard, Deluxe, Suite)
+    capacity    INT NOT NULL DEFAULT 2,      -- 수용 인원
+    base_price  DECIMAL(10,2) NOT NULL,      -- 기본 가격
+    created_at  TIMESTAMP DEFAULT NOW(),     -- 생성 시각
+    CONSTRAINT fk_room_types_hotels FOREIGN KEY (hotel_id) REFERENCES hotels(id)
+);
+
+-- 날짜별 재고
+CREATE TABLE inventories (
+    id              BIGSERIAL PRIMARY KEY,   -- 재고 PK
+    room_type_id    BIGINT NOT NULL,         -- 객실 타입 FK
+    stock_date      DATE NOT NULL,           -- 재고 날짜
+    total_quantity  INT NOT NULL,            -- 전체 객실 수
+    available_quantity INT NOT NULL,         -- 예약 가능 수량
+    created_at      TIMESTAMP DEFAULT NOW(), -- 생성 시각
+    updated_at      TIMESTAMP DEFAULT NOW(), -- 수정 시각
+    CONSTRAINT fk_inventories_room_types FOREIGN KEY (room_type_id) REFERENCES room_types(id),
+    CONSTRAINT uq_inventories_room_date UNIQUE (room_type_id, stock_date)  -- 객실타입+날짜 유니크
+);
+
+-- 판매 채널
+CREATE TABLE channels (
+    id          BIGSERIAL PRIMARY KEY,       -- 채널 PK
+    code        VARCHAR(50) NOT NULL UNIQUE, -- 채널 코드 (DIRECT, OTA_A, OTA_B)
+    name        VARCHAR(200) NOT NULL,       -- 채널명
+    is_active   BOOLEAN DEFAULT TRUE,        -- 활성 상태
+    created_at  TIMESTAMP DEFAULT NOW()      -- 생성 시각
+);
+
+-- 예약
+CREATE TABLE reservations (
+    id              BIGSERIAL PRIMARY KEY,       -- 예약 PK
+    channel_id      BIGINT NOT NULL,             -- 채널 FK
+    room_type_id    BIGINT NOT NULL,             -- 객실 타입 FK
+    check_in_date   DATE NOT NULL,               -- 체크인 날짜
+    check_out_date  DATE NOT NULL,               -- 체크아웃 날짜
+    guest_name      VARCHAR(200) NOT NULL,       -- 투숙객 이름
+    quantity        INT NOT NULL DEFAULT 1,      -- 예약 객실 수
+    status          VARCHAR(50) NOT NULL,        -- 예약 상태 (CONFIRMED, CANCELLED)
+    total_price     DECIMAL(12,2),               -- 총 금액
+    created_at      TIMESTAMP DEFAULT NOW(),     -- 생성 시각
+    updated_at      TIMESTAMP DEFAULT NOW(),     -- 수정 시각
+    CONSTRAINT fk_reservations_channels FOREIGN KEY (channel_id) REFERENCES channels(id),
+    CONSTRAINT fk_reservations_room_types FOREIGN KEY (room_type_id) REFERENCES room_types(id)
+);
+
+-- 채널 이벤트 (모든 변경 이력)
+CREATE TABLE channel_events (
+    id              BIGSERIAL PRIMARY KEY,       -- 이벤트 PK
+    event_type      VARCHAR(100) NOT NULL,       -- 이벤트 타입 (INVENTORY_UPDATED, RESERVATION_CREATED 등)
+    channel_id      BIGINT,                      -- 관련 채널 FK (nullable)
+    reservation_id  BIGINT,                      -- 관련 예약 FK (nullable)
+    room_type_id    BIGINT,                      -- 관련 객실 타입 FK (nullable)
+    payload         TEXT,                        -- 이벤트 상세 데이터 (JSON)
+    created_at      TIMESTAMP DEFAULT NOW(),     -- 이벤트 발생 시각
+    CONSTRAINT fk_events_channels FOREIGN KEY (channel_id) REFERENCES channels(id),
+    CONSTRAINT fk_events_reservations FOREIGN KEY (reservation_id) REFERENCES reservations(id),
+    CONSTRAINT fk_events_room_types FOREIGN KEY (room_type_id) REFERENCES room_types(id)
+);
+
+-- 인덱스
+CREATE INDEX idx_inventories_room_date ON inventories(room_type_id, stock_date);
+CREATE INDEX idx_reservations_channel ON reservations(channel_id);
+CREATE INDEX idx_reservations_room_type ON reservations(room_type_id);
+CREATE INDEX idx_reservations_status ON reservations(status);
+CREATE INDEX idx_channel_events_type ON channel_events(event_type);
+CREATE INDEX idx_channel_events_created ON channel_events(created_at);
+```
+
+---
+
+## 다음 단계
+
+이 개념을 바탕으로 Phase 1에서는 다음을 구현한다:
+
+1. **Gradle 멀티 모듈 프로젝트** 초기화
+2. **도메인 엔티티** (Kotlin & Java) 구현
+3. **Flyway 마이그레이션** SQL 작성
+4. **R2DBC Repository** 정의
+5. **애플리케이션 설정** (application.yml)
+6. 동작 확인
