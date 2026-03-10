@@ -1,0 +1,22 @@
+# Java 모듈 애플리케이션 설정
+
+spring:
+  application:
+    name: channel-manager-java  # 애플리케이션 이름
+
+  # R2DBC 데이터소스 설정 (논블로킹 DB 연결)
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/channel_manager  # R2DBC PostgreSQL 연결 URL
+    username: postgres  # DB 사용자명
+    password: postgres  # DB 비밀번호
+
+  # Flyway 마이그레이션 설정 (JDBC 기반으로 동작)
+  flyway:
+    enabled: true  # Flyway 활성화
+    url: jdbc:postgresql://localhost:5432/channel_manager  # JDBC URL (Flyway는 JDBC 사용)
+    user: postgres  # DB 사용자명
+    password: postgres  # DB 비밀번호
+    locations: classpath:db/migration  # 마이그레이션 SQL 파일 경로 (common 모듈에서 제공)
+
+server:
+  port: 8081  # Java 모듈 서버 포트 (Kotlin 모듈과 충돌 방지)
