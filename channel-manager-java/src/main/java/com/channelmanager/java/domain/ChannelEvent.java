@@ -22,20 +22,20 @@ import java.time.LocalDateTime; // 날짜+시간 타입
 @Table("channel_events")
 public class ChannelEvent {
 
-    @Schema(description = "이벤트 고유 식별자 (PK)", example = "1")
+    @Schema(description = "채널 이벤트 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
-    @Schema(description = "이벤트 타입 (INVENTORY_UPDATED, RESERVATION_CREATED, RESERVATION_CANCELLED, CHANNEL_SYNCED)", example = "RESERVATION_CREATED")
+    @Schema(description = "이벤트 타입", example = "RESERVATION_CREATED")
     private EventType eventType;
 
-    @Schema(description = "관련 채널 ID (FK)", example = "1", nullable = true)
+    @Schema(description = "채널 ID (FK)", example = "1", nullable = true)
     private Long channelId;
 
-    @Schema(description = "관련 예약 ID (FK)", example = "1", nullable = true)
+    @Schema(description = "예약 ID (FK)", example = "1", nullable = true)
     private Long reservationId;
 
-    @Schema(description = "관련 객실 타입 ID (FK)", example = "1", nullable = true)
+    @Schema(description = "객실 타입 ID (FK)", example = "1", nullable = true)
     private Long roomTypeId;
 
     @Schema(description = "이벤트 상세 데이터 (JSON)", example = "{\"before\": 10, \"after\": 9}", nullable = true)

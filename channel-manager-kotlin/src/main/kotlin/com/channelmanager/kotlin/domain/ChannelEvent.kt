@@ -13,20 +13,20 @@ import java.time.LocalDateTime // 날짜+시간 타입
 @Schema(description = "시스템 변경 이벤트를 기록하는 엔티티")
 @Table("channel_events")
 data class ChannelEvent(
-    @field:Schema(description = "이벤트 고유 식별자 (PK)", example = "1")
+    @field:Schema(description = "채널 이벤트 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     val id: Long? = null, // null이면 INSERT, 값이 있으면 UPDATE
 
-    @field:Schema(description = "이벤트 타입 (INVENTORY_UPDATED, RESERVATION_CREATED, RESERVATION_CANCELLED, CHANNEL_SYNCED)", example = "RESERVATION_CREATED")
+    @field:Schema(description = "이벤트 타입", example = "RESERVATION_CREATED")
     val eventType: EventType,
 
-    @field:Schema(description = "관련 채널 ID (FK)", example = "1", nullable = true)
+    @field:Schema(description = "채널 ID (FK)", example = "1", nullable = true)
     val channelId: Long? = null,
 
-    @field:Schema(description = "관련 예약 ID (FK)", example = "1", nullable = true)
+    @field:Schema(description = "예약 ID (FK)", example = "1", nullable = true)
     val reservationId: Long? = null,
 
-    @field:Schema(description = "관련 객실 타입 ID (FK)", example = "1", nullable = true)
+    @field:Schema(description = "객실 타입 ID (FK)", example = "1", nullable = true)
     val roomTypeId: Long? = null,
 
     @field:Schema(description = "이벤트 상세 데이터 (JSON)", example = "{\"before\": 10, \"after\": 9}", nullable = true)

@@ -21,14 +21,14 @@ import java.time.LocalDateTime; // 날짜+시간 타입
 @Table("channels")
 public class Channel {
 
-    @Schema(description = "채널 고유 식별자 (PK)", example = "1")
+    @Schema(description = "채널 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
-    @Schema(description = "채널 고유 코드", example = "OTA_A")
+    @Schema(description = "채널 코드", example = "OTA_A")
     private String channelCode;
 
-    @Schema(description = "채널 표시 이름", example = "온라인 여행사 A")
+    @Schema(description = "채널명", example = "온라인 여행사 A")
     private String channelName;
 
     @Schema(description = "채널 활성 상태", example = "true", defaultValue = "true")

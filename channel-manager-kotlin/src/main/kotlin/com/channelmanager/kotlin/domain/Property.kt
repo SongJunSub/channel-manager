@@ -12,17 +12,17 @@ import java.time.LocalDateTime // 날짜+시간 타입
 @Schema(description = "숙소 정보를 나타내는 엔티티")
 @Table("properties")
 data class Property(
-    @field:Schema(description = "숙소 고유 식별자 (PK)", example = "1")
+    @field:Schema(description = "프로퍼티 ID (PK)", example = "1")
     @Id // 이 필드가 PK(Primary Key)임을 Spring Data에 알린다
     val id: Long? = null, // null이면 새 엔티티(INSERT), 값이 있으면 기존 엔티티(UPDATE)
 
-    @field:Schema(description = "숙소 고유 코드", example = "SEOUL_GRAND")
+    @field:Schema(description = "프로퍼티 코드", example = "SEOUL_GRAND")
     val propertyCode: String,
 
-    @field:Schema(description = "숙소명", example = "서울 그랜드 호텔")
+    @field:Schema(description = "프로퍼티명", example = "서울 그랜드 호텔")
     val propertyName: String,
 
-    @field:Schema(description = "숙소 주소", example = "서울특별시 중구 을지로 30", nullable = true)
+    @field:Schema(description = "프로퍼티 주소", example = "서울특별시 중구 을지로 30", nullable = true)
     val propertyAddress: String? = null,
 
     @field:Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY)

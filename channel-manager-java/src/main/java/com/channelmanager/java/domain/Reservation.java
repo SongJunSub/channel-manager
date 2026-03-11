@@ -24,11 +24,11 @@ import java.time.LocalDateTime; // 날짜+시간 타입
 @Table("reservations")
 public class Reservation {
 
-    @Schema(description = "예약 고유 식별자 (PK)", example = "1")
+    @Schema(description = "예약 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
-    @Schema(description = "예약 채널 ID (FK)", example = "1")
+    @Schema(description = "채널 ID (FK)", example = "1")
     private Long channelId;
 
     @Schema(description = "객실 타입 ID (FK)", example = "1")
@@ -43,11 +43,11 @@ public class Reservation {
     @Schema(description = "투숙객 이름", example = "홍길동")
     private String guestName;
 
-    @Schema(description = "예약 객실 수", example = "1", defaultValue = "1")
+    @Schema(description = "예약 객실 수량", example = "1", defaultValue = "1")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
     private int roomQuantity = 1;
 
-    @Schema(description = "예약 상태 (CONFIRMED, CANCELLED)", example = "CONFIRMED")
+    @Schema(description = "예약 상태", example = "CONFIRMED")
     private ReservationStatus status;
 
     @Schema(description = "총 금액", example = "300000", nullable = true)

@@ -15,17 +15,17 @@ import java.time.LocalDateTime // 날짜+시간 타입
 @Schema(description = "날짜별 객실 재고 정보를 나타내는 엔티티")
 @Table("inventories")
 data class Inventory(
-    @field:Schema(description = "재고 고유 식별자 (PK)", example = "1")
+    @field:Schema(description = "재고 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     val id: Long? = null, // null이면 INSERT, 값이 있으면 UPDATE
 
-    @field:Schema(description = "객실 타입 ID (FK)", example = "1")
+    @field:Schema(description = "객실 타입 ID", example = "1")
     val roomTypeId: Long,
 
     @field:Schema(description = "재고 날짜", example = "2026-03-15")
     val stockDate: LocalDate,
 
-    @field:Schema(description = "전체 객실 수", example = "10")
+    @field:Schema(description = "전체 객실 수량", example = "10")
     val totalQuantity: Int,
 
     @field:Schema(description = "예약 가능 수량", example = "5")

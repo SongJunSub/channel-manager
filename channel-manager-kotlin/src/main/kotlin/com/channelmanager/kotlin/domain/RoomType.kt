@@ -13,14 +13,14 @@ import java.time.LocalDateTime // 날짜+시간 타입
 @Schema(description = "객실 타입 정보를 나타내는 엔티티")
 @Table("room_types")
 data class RoomType(
-    @field:Schema(description = "객실 타입 고유 식별자 (PK)", example = "1")
+    @field:Schema(description = "객실 타입 ID (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
     val id: Long? = null, // null이면 INSERT, 값이 있으면 UPDATE
 
-    @field:Schema(description = "소속 숙소 ID (FK)", example = "1")
+    @field:Schema(description = "프로퍼티 ID (FK)", example = "1")
     val propertyId: Long, // JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
 
-    @field:Schema(description = "객실 타입 고유 코드", example = "DLX")
+    @field:Schema(description = "객실 타입 코드", example = "DLX")
     val roomTypeCode: String,
 
     @field:Schema(description = "객실 타입명", example = "Deluxe")
