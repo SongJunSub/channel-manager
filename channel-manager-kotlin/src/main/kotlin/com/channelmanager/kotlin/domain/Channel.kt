@@ -17,10 +17,10 @@ data class Channel(
     val id: Long? = null, // null이면 INSERT, 값이 있으면 UPDATE
 
     @field:Schema(description = "채널 고유 코드", example = "OTA_A")
-    val code: String,
+    val channelCode: String,
 
     @field:Schema(description = "채널 표시 이름", example = "온라인 여행사 A")
-    val name: String,
+    val channelName: String,
 
     @field:Schema(description = "채널 활성 상태", example = "true", defaultValue = "true")
     val isActive: Boolean = true,

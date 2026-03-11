@@ -35,7 +35,7 @@ data class Reservation(
     val guestName: String,
 
     @field:Schema(description = "예약 객실 수", example = "1", defaultValue = "1")
-    val quantity: Int = 1,
+    val roomQuantity: Int = 1,
 
     @field:Schema(description = "예약 상태 (CONFIRMED, CANCELLED)", example = "CONFIRMED")
     val status: ReservationStatus,

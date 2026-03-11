@@ -30,7 +30,7 @@ data class ChannelEvent(
     val roomTypeId: Long? = null,
 
     @field:Schema(description = "이벤트 상세 데이터 (JSON)", example = "{\"before\": 10, \"after\": 9}", nullable = true)
-    val payload: String? = null,
+    val eventPayload: String? = null,
 
     @field:Schema(description = "이벤트 발생 시각", accessMode = Schema.AccessMode.READ_ONLY)
     @CreatedDate // 엔티티 생성 시 현재 시각 자동 기록

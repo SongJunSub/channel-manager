@@ -20,11 +20,14 @@ data class RoomType(
     @field:Schema(description = "소속 숙소 ID (FK)", example = "1")
     val propertyId: Long, // JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
 
-    @field:Schema(description = "객실 타입명", example = "Deluxe")
-    val name: String,
+    @field:Schema(description = "객실 타입 고유 코드", example = "DLX")
+    val roomTypeCode: String,
 
-    @field:Schema(description = "수용 인원", example = "2", defaultValue = "2")
-    val capacity: Int = 2,
+    @field:Schema(description = "객실 타입명", example = "Deluxe")
+    val roomTypeName: String,
+
+    @field:Schema(description = "최대 수용 인원", example = "2", defaultValue = "2")
+    val maxCapacity: Int = 2,
 
     @field:Schema(description = "기본 가격 (1박 기준)", example = "150000")
     val basePrice: BigDecimal, // BigDecimal로 금액의 정밀도를 보장한다

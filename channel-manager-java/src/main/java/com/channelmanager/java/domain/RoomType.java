@@ -29,12 +29,15 @@ public class RoomType {
     @Schema(description = "소속 숙소 ID (FK)", example = "1")
     private Long propertyId; // JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
 
-    @Schema(description = "객실 타입명", example = "Deluxe")
-    private String name;
+    @Schema(description = "객실 타입 고유 코드", example = "DLX")
+    private String roomTypeCode;
 
-    @Schema(description = "수용 인원", example = "2", defaultValue = "2")
+    @Schema(description = "객실 타입명", example = "Deluxe")
+    private String roomTypeName;
+
+    @Schema(description = "최대 수용 인원", example = "2", defaultValue = "2")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
-    private int capacity = 2;
+    private int maxCapacity = 2;
 
     @Schema(description = "기본 가격 (1박 기준)", example = "150000")
     private BigDecimal basePrice; // BigDecimal로 금액의 정밀도를 보장한다

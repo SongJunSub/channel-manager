@@ -26,10 +26,10 @@ public class Channel {
     private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
     @Schema(description = "채널 고유 코드", example = "OTA_A")
-    private String code;
+    private String channelCode;
 
     @Schema(description = "채널 표시 이름", example = "온라인 여행사 A")
-    private String name;
+    private String channelName;
 
     @Schema(description = "채널 활성 상태", example = "true", defaultValue = "true")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션

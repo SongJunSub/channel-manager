@@ -45,7 +45,7 @@ public class Reservation {
 
     @Schema(description = "예약 객실 수", example = "1", defaultValue = "1")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
-    private int quantity = 1;
+    private int roomQuantity = 1;
 
     @Schema(description = "예약 상태 (CONFIRMED, CANCELLED)", example = "CONFIRMED")
     private ReservationStatus status;
