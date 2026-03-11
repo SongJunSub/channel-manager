@@ -104,44 +104,44 @@ Netty started on port 8080
 ```java
 // === Spring MVC: 블로킹 ===
 @RestController
-@RequestMapping("/api/hotels")
-public class HotelController {
+@RequestMapping("/api/properties")
+public class PropertyController {
 
     @GetMapping("/{id}")
-    public Hotel findById(@PathVariable Long id) {     // 반환 타입: Hotel (블로킹)
-        return hotelService.findById(id);               // 스레드가 결과 올 때까지 대기
+    public Property findById(@PathVariable Long id) {     // 반환 타입: Property (블로킹)
+        return propertyService.findById(id);               // 스레드가 결과 올 때까지 대기
     }
 }
 
 // === Spring WebFlux: 논블로킹 ===
 @RestController
-@RequestMapping("/api/hotels")
-public class HotelController {
+@RequestMapping("/api/properties")
+public class PropertyController {
 
     @GetMapping("/{id}")
-    public Mono<Hotel> findById(@PathVariable Long id) {  // 반환 타입: Mono<Hotel> (논블로킹)
-        return hotelService.findById(id);                  // Mono를 반환, WebFlux가 구독 처리
+    public Mono<Property> findById(@PathVariable Long id) {  // 반환 타입: Mono<Property> (논블로킹)
+        return propertyService.findById(id);                  // Mono를 반환, WebFlux가 구독 처리
     }
 }
 ```
 
 **차이점:**
-- MVC: `Hotel` → 메서드가 끝날 때 값이 이미 준비되어 있음
-- WebFlux: `Mono<Hotel>` → "나중에 Hotel 1개를 줄게"라는 약속을 반환
+- MVC: `Property` → 메서드가 끝날 때 값이 이미 준비되어 있음
+- WebFlux: `Mono<Property>` → "나중에 Property 1개를 줄게"라는 약속을 반환
 
 ### 목록 조회
 
 ```java
 // === Spring MVC ===
 @GetMapping
-public List<Hotel> findAll() {         // List<Hotel>: 모든 데이터가 메모리에 로드
-    return hotelService.findAll();
+public List<Property> findAll() {         // List<Property>: 모든 데이터가 메모리에 로드
+    return propertyService.findAll();
 }
 
 // === Spring WebFlux ===
 @GetMapping
-public Flux<Hotel> findAll() {         // Flux<Hotel>: 데이터를 하나씩 스트리밍
-    return hotelService.findAll();
+public Flux<Property> findAll() {         // Flux<Property>: 데이터를 하나씩 스트리밍
+    return propertyService.findAll();
 }
 ```
 
@@ -155,15 +155,15 @@ public Flux<Hotel> findAll() {         // Flux<Hotel>: 데이터를 하나씩 �
 // === Spring MVC ===
 @PostMapping
 @ResponseStatus(HttpStatus.CREATED)
-public Hotel create(@RequestBody CreateHotelRequest request) {
-    return hotelService.create(request);    // 동기 호출
+public Property create(@RequestBody CreatePropertyRequest request) {
+    return propertyService.create(request);    // 동기 호출
 }
 
 // === Spring WebFlux ===
 @PostMapping
 @ResponseStatus(HttpStatus.CREATED)
-public Mono<Hotel> create(@RequestBody CreateHotelRequest request) {
-    return hotelService.create(request);    // 비동기 호출 (Mono 반환)
+public Mono<Property> create(@RequestBody CreatePropertyRequest request) {
+    return propertyService.create(request);    // 비동기 호출 (Mono 반환)
 }
 ```
 
@@ -172,19 +172,19 @@ public Mono<Hotel> create(@RequestBody CreateHotelRequest request) {
 ```java
 // === Spring MVC ===
 @GetMapping("/{id}")
-public ResponseEntity<Hotel> findById(@PathVariable Long id) {
-    Hotel hotel = hotelService.findById(id);
-    if (hotel == null) {
+public ResponseEntity<Property> findById(@PathVariable Long id) {
+    Property property = propertyService.findById(id);
+    if (property == null) {
         return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(hotel);
+    return ResponseEntity.ok(property);
 }
 
 // === Spring WebFlux ===
 @GetMapping("/{id}")
-public Mono<ResponseEntity<Hotel>> findById(@PathVariable Long id) {
-    return hotelService.findById(id)
-        .map(hotel -> ResponseEntity.ok(hotel))                    // 값이 있으면 200 OK
+public Mono<ResponseEntity<Property>> findById(@PathVariable Long id) {
+    return propertyService.findById(id)
+        .map(property -> ResponseEntity.ok(property))                    // 값이 있으면 200 OK
         .defaultIfEmpty(ResponseEntity.notFound().build());        // 값이 없으면 404
 }
 ```
@@ -198,31 +198,31 @@ public Mono<ResponseEntity<Hotel>> findById(@PathVariable Long id) {
 ```java
 // === Spring MVC ===
 @Service
-public class HotelService {
-    private final HotelRepository hotelRepository;
+public class PropertyService {
+    private final PropertyRepository propertyRepository;
 
-    public Hotel findById(Long id) {
-        return hotelRepository.findById(id)         // Optional<Hotel> 반환 (블로킹)
-            .orElseThrow(() -> new NotFoundException("Hotel not found"));
+    public Property findById(Long id) {
+        return propertyRepository.findById(id)         // Optional<Property> 반환 (블로킹)
+            .orElseThrow(() -> new NotFoundException("Property not found"));
     }
 
-    public List<Hotel> findAll() {
-        return hotelRepository.findAll();            // List<Hotel> 반환 (블로킹)
+    public List<Property> findAll() {
+        return propertyRepository.findAll();            // List<Property> 반환 (블로킹)
     }
 }
 
 // === Spring WebFlux ===
 @Service
-public class HotelService {
-    private final HotelRepository hotelRepository;
+public class PropertyService {
+    private final PropertyRepository propertyRepository;
 
-    public Mono<Hotel> findById(Long id) {
-        return hotelRepository.findById(id)          // Mono<Hotel> 반환 (논블로킹)
-            .switchIfEmpty(Mono.error(new NotFoundException("Hotel not found")));
+    public Mono<Property> findById(Long id) {
+        return propertyRepository.findById(id)          // Mono<Property> 반환 (논블로킹)
+            .switchIfEmpty(Mono.error(new NotFoundException("Property not found")));
     }
 
-    public Flux<Hotel> findAll() {
-        return hotelRepository.findAll();             // Flux<Hotel> 반환 (논블로킹)
+    public Flux<Property> findAll() {
+        return propertyRepository.findAll();             // Flux<Property> 반환 (논블로킹)
     }
 }
 ```
@@ -231,30 +231,30 @@ public class HotelService {
 
 ```java
 // === Spring MVC: 순차 블로킹 호출 ===
-public HotelDetailDto getHotelDetail(Long hotelId) {
-    Hotel hotel = hotelRepository.findById(hotelId)
-        .orElseThrow(() -> new NotFoundException("Hotel not found"));
+public PropertyDetailDto getPropertyDetail(Long propertyId) {
+    Property property = propertyRepository.findById(propertyId)
+        .orElseThrow(() -> new NotFoundException("Property not found"));
 
-    List<RoomType> roomTypes = roomTypeRepository.findByHotelId(hotelId);  // 블로킹
+    List<RoomType> roomTypes = roomTypeRepository.findByPropertyId(propertyId);  // 블로킹
     List<Channel> channels = channelRepository.findAll();                   // 블로킹 (순차)
 
-    return new HotelDetailDto(hotel, roomTypes, channels);
+    return new PropertyDetailDto(property, roomTypes, channels);
 }
 
 // === Spring WebFlux: 비동기 병렬 호출 ===
-public Mono<HotelDetailDto> getHotelDetail(Long hotelId) {
-    Mono<Hotel> hotelMono = hotelRepository.findById(hotelId)
-        .switchIfEmpty(Mono.error(new NotFoundException("Hotel not found")));
+public Mono<PropertyDetailDto> getPropertyDetail(Long propertyId) {
+    Mono<Property> propertyMono = propertyRepository.findById(propertyId)
+        .switchIfEmpty(Mono.error(new NotFoundException("Property not found")));
 
     Mono<List<RoomType>> roomTypesMono = roomTypeRepository
-        .findByHotelId(hotelId).collectList();                             // 논블로킹
+        .findByPropertyId(propertyId).collectList();                             // 논블로킹
     Mono<List<Channel>> channelsMono = channelRepository
         .findAll().collectList();                                           // 논블로킹
 
     // Mono.zip: 세 개의 Mono를 병렬로 실행하고, 모두 완료되면 결합
-    return Mono.zip(hotelMono, roomTypesMono, channelsMono)
-        .map(tuple -> new HotelDetailDto(
-            tuple.getT1(),      // Hotel
+    return Mono.zip(propertyMono, roomTypesMono, channelsMono)
+        .map(tuple -> new PropertyDetailDto(
+            tuple.getT1(),      // Property
             tuple.getT2(),      // List<RoomType>
             tuple.getT3()       // List<Channel>
         ));
@@ -316,17 +316,17 @@ public Mono<Reservation> createReservation(CreateReservationRequest request) {
 
 ```java
 // === Spring MVC + JPA ===
-public interface HotelRepository extends JpaRepository<Hotel, Long> {
-    // 반환 타입: Optional<Hotel>, List<Hotel>
-    Optional<Hotel> findByName(String name);
-    List<Hotel> findByAddressContaining(String keyword);
+public interface PropertyRepository extends JpaRepository<Property, Long> {
+    // 반환 타입: Optional<Property>, List<Property>
+    Optional<Property> findByName(String name);
+    List<Property> findByAddressContaining(String keyword);
 }
 
 // === Spring WebFlux + R2DBC ===
-public interface HotelRepository extends ReactiveCrudRepository<Hotel, Long> {
-    // 반환 타입: Mono<Hotel>, Flux<Hotel>
-    Mono<Hotel> findByName(String name);
-    Flux<Hotel> findByAddressContaining(String keyword);
+public interface PropertyRepository extends ReactiveCrudRepository<Property, Long> {
+    // 반환 타입: Mono<Property>, Flux<Property>
+    Mono<Property> findByName(String name);
+    Flux<Property> findByAddressContaining(String keyword);
 }
 ```
 
@@ -346,8 +346,8 @@ public interface HotelRepository extends ReactiveCrudRepository<Hotel, Long> {
 ```java
 // === JPA 엔티티 ===
 @Entity                           // JPA 전용
-@Table(name = "hotels")           // javax.persistence.Table
-public class Hotel {
+@Table(name = "properties")           // javax.persistence.Table
+public class Property {
     @Id                           // javax.persistence.Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)  // 자동 증가 전략
     private Long id;
@@ -355,7 +355,7 @@ public class Hotel {
     @Column(nullable = false, length = 200)  // 컬럼 상세 설정
     private String name;
 
-    @OneToMany(mappedBy = "hotel", fetch = FetchType.LAZY)  // 연관관계
+    @OneToMany(mappedBy = "property", fetch = FetchType.LAZY)  // 연관관계
     private List<RoomType> roomTypes;
 
     @CreatedDate
@@ -363,15 +363,15 @@ public class Hotel {
 }
 
 // === R2DBC 엔티티 ===
-@Table("hotels")                   // org.springframework.data.relational.core.mapping.Table
-public class Hotel {
+@Table("properties")                   // org.springframework.data.relational.core.mapping.Table
+public class Property {
     @Id                            // org.springframework.data.annotation.Id
     private Long id;               // BIGSERIAL이면 자동 증가 (별도 어노테이션 불필요)
 
     private String name;           // 컬럼 상세 설정 어노테이션 없음
 
     // @OneToMany 없음!            // 연관관계 매핑 불가
-    // private Long hotelId;       // 대신 FK ID를 직접 저장
+    // private Long propertyId;       // 대신 FK ID를 직접 저장
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -402,16 +402,16 @@ public class Hotel {
 
 ```java
 // === Spring MVC: 일반 예외 던지기 ===
-public Hotel findById(Long id) {
-    return hotelRepository.findById(id)
-        .orElseThrow(() -> new NotFoundException("Hotel not found: " + id));
+public Property findById(Long id) {
+    return propertyRepository.findById(id)
+        .orElseThrow(() -> new NotFoundException("Property not found: " + id));
     // 예외가 즉시 발생하고, 콜 스택을 타고 올라감
 }
 
 // === Spring WebFlux: Reactive 예외 ===
-public Mono<Hotel> findById(Long id) {
-    return hotelRepository.findById(id)
-        .switchIfEmpty(Mono.error(new NotFoundException("Hotel not found: " + id)));
+public Mono<Property> findById(Long id) {
+    return propertyRepository.findById(id)
+        .switchIfEmpty(Mono.error(new NotFoundException("Property not found: " + id)));
     // Mono.error(): 구독 시점에 에러 시그널을 발행
     // switchIfEmpty(): Mono가 비어있을 때 대체 Mono를 제공
 }
@@ -447,10 +447,10 @@ public class GlobalExceptionHandler {
 
 ```java
 // === WebFlux: Reactive 연산자로 에러 처리 ===
-public Mono<Hotel> findById(Long id) {
-    return hotelRepository.findById(id)
+public Mono<Property> findById(Long id) {
+    return propertyRepository.findById(id)
         // 에러 시 대체값 반환
-        .onErrorReturn(Hotel.builder().name("기본 호텔").build())
+        .onErrorReturn(Property.builder().name("기본 숙소").build())
 
         // 에러 시 대체 Publisher로 전환
         .onErrorResume(e -> {
@@ -529,20 +529,20 @@ public class ReservationService {
 ```java
 // === Spring MVC: 일반 JUnit 테스트 ===
 @Test
-void shouldFindHotelById() {
-    when(hotelRepository.findById(1L)).thenReturn(Optional.of(hotel));
+void shouldFindPropertyById() {
+    when(propertyRepository.findById(1L)).thenReturn(Optional.of(property));
 
-    Hotel result = hotelService.findById(1L);   // 동기 호출
+    Property result = propertyService.findById(1L);   // 동기 호출
 
     assertThat(result.getName()).isEqualTo("서울 호텔");
 }
 
 // === Spring WebFlux: StepVerifier 사용 ===
 @Test
-void shouldFindHotelById() {
-    when(hotelRepository.findById(1L)).thenReturn(Mono.just(hotel));
+void shouldFindPropertyById() {
+    when(propertyRepository.findById(1L)).thenReturn(Mono.just(property));
 
-    Mono<Hotel> result = hotelService.findById(1L);  // Mono 반환 (아직 실행되지 않음)
+    Mono<Property> result = propertyService.findById(1L);  // Mono 반환 (아직 실행되지 않음)
 
     StepVerifier.create(result)           // StepVerifier가 구독하여 실행
         .expectNextMatches(h -> h.getName().equals("서울 호텔"))  // 값 검증
@@ -555,20 +555,20 @@ void shouldFindHotelById() {
 ```java
 // === Spring MVC: MockMvc ===
 @Test
-void shouldGetHotel() throws Exception {
-    mockMvc.perform(get("/api/hotels/1"))
+void shouldGetProperty() throws Exception {
+    mockMvc.perform(get("/api/properties/1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("서울 호텔"));
 }
 
 // === Spring WebFlux: WebTestClient ===
 @Test
-void shouldGetHotel() {
-    webTestClient.get().uri("/api/hotels/1")
+void shouldGetProperty() {
+    webTestClient.get().uri("/api/properties/1")
         .exchange()                                    // 요청 실행
         .expectStatus().isOk()
-        .expectBody(Hotel.class)
-        .value(hotel -> assertThat(hotel.getName()).isEqualTo("서울 호텔"));
+        .expectBody(Property.class)
+        .value(property -> assertThat(property.getName()).isEqualTo("서울 호텔"));
 }
 ```
 
@@ -677,10 +677,10 @@ InputStream is = new FileInputStream("file.txt");  // 블로킹 파일 I/O!
 
 // 3. JDBC 호출 (블로킹)
 Connection conn = DriverManager.getConnection(url);  // 블로킹!
-ResultSet rs = stmt.executeQuery("SELECT * FROM hotels");  // 블로킹!
+ResultSet rs = stmt.executeQuery("SELECT * FROM properties");  // 블로킹!
 
 // 4. .block() 호출 (Mono/Flux를 블로킹으로 변환)
-Hotel hotel = hotelRepository.findById(1L).block();  // 논블로킹을 블로킹으로!
+Property property = propertyRepository.findById(1L).block();  // 논블로킹을 블로킹으로!
 
 // 5. synchronized 블록
 synchronized (this) { /* ... */ }  // 스레드를 잠금!
@@ -695,10 +695,10 @@ Mono.delay(Duration.ofSeconds(1)).then(/* ... */);
 DataBufferUtils.read(resource, new DefaultDataBufferFactory(), 4096);
 
 // 3. JDBC → R2DBC
-hotelRepository.findById(1L);  // R2DBC는 논블로킹
+propertyRepository.findById(1L);  // R2DBC는 논블로킹
 
 // 4. .block() → flatMap/map으로 체인 유지
-hotelRepository.findById(1L).flatMap(hotel -> /* ... */);
+propertyRepository.findById(1L).flatMap(property -> /* ... */);
 
 // 5. synchronized → Sinks 또는 AtomicReference
 Sinks.Many<Event> sink = Sinks.many().multicast().onBackpressureBuffer();

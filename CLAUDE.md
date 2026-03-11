@@ -57,7 +57,7 @@ channel-manager/
 ```
 
 ## 도메인 모델
-- Hotel: 호텔 정보
+- Property: 숙소 정보
 - RoomType: 객실 타입 (Standard, Deluxe, Suite)
 - Inventory: 날짜별/객실타입별 재고
 - Channel: 판매 채널 (DIRECT, OTA_A, OTA_B)
