@@ -7,7 +7,7 @@ CREATE TABLE reservations (
     check_in_date  DATE           NOT NULL,                 -- 체크인 날짜
     check_out_date DATE           NOT NULL,                 -- 체크아웃 날짜
     guest_name     VARCHAR(100)   NOT NULL,                 -- 투숙객 이름
-    quantity       INT            NOT NULL DEFAULT 1,       -- 예약 객실 수 (기본 1개)
+    room_quantity  INT            NOT NULL DEFAULT 1,       -- 예약 객실 수 (기본 1개)
     status         VARCHAR(20)    NOT NULL,                 -- 예약 상태 (CONFIRMED, CANCELLED)
     total_price    DECIMAL(12, 2),                          -- 총 금액 (선택)
     created_at     TIMESTAMP      NOT NULL DEFAULT NOW(),   -- 생성 시각

@@ -7,7 +7,7 @@ CREATE TABLE channel_events (
     channel_id     BIGINT,                               -- 관련 채널 FK (선택)
     reservation_id BIGINT,                               -- 관련 예약 FK (선택)
     room_type_id   BIGINT,                               -- 관련 객실 타입 FK (선택)
-    payload        TEXT,                                  -- 이벤트 상세 데이터 (JSON)
+    event_payload  TEXT,                                  -- 이벤트 상세 데이터 (JSON)
     created_at     TIMESTAMP   NOT NULL DEFAULT NOW(),   -- 이벤트 발생 시각
 
     CONSTRAINT fk_channel_events_channels
