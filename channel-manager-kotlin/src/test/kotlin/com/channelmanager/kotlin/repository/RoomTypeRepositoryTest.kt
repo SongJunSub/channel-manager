@@ -12,17 +12,17 @@ class RoomTypeRepositoryTest {
     private lateinit var roomTypeRepository: RoomTypeRepository
 
     @Test // findByPropertyId - 숙소별 객실 타입 조회 테스트
-    fun `서울 그랜드 호텔의 객실 타입 3개를 조회한다`() {
-        // property_id = 1 (서울 그랜드 호텔)의 객실 타입을 조회한다
+    fun `서울신라호텔의 객실 타입 3개를 조회한다`() {
+        // property_id = 1 (서울신라호텔)의 객실 타입을 조회한다
         StepVerifier.create(roomTypeRepository.findByPropertyId(1L))
-            .expectNextCount(3) // Standard, Deluxe, Suite 3개
+            .expectNextCount(3) // Superior Double, Deluxe Twin, Executive Suite 3개
             .verifyComplete()
     }
 
-    @Test // findByPropertyId - 부산 오션 리조트 객실 타입 조회
-    fun `부산 오션 리조트의 객실 타입 2개를 조회한다`() {
+    @Test // findByPropertyId - 파라다이스 호텔 부산 객실 타입 조회
+    fun `파라다이스 호텔 부산의 객실 타입 2개를 조회한다`() {
         StepVerifier.create(roomTypeRepository.findByPropertyId(2L))
-            .expectNextCount(2) // Standard, Deluxe 2개
+            .expectNextCount(2) // Standard Ocean View, Deluxe Ocean Front 2개
             .verifyComplete()
     }
 
@@ -31,9 +31,9 @@ class RoomTypeRepositoryTest {
         StepVerifier.create(roomTypeRepository.findById(2L))
             .expectNextMatches { roomType ->
                 roomType.roomTypeCode == "DLX" && // 객실 타입 코드
-                    roomType.roomTypeName == "Deluxe" && // 객실 타입명
+                    roomType.roomTypeName == "Deluxe Twin" && // 객실 타입명
                     roomType.maxCapacity == 3 && // 최대 수용 인원
-                    roomType.propertyId == 1L // 서울 그랜드 호텔 소속
+                    roomType.propertyId == 1L // 서울신라호텔 소속
             }
             .verifyComplete()
     }

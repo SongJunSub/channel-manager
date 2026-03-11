@@ -12,10 +12,10 @@ class ChannelRepositoryTest {
   private ChannelRepository channelRepository;
 
   @Test // findByChannelCode - 채널 코드로 단건 조회 테스트
-  void 채널_코드로_조회한다() {
-    StepVerifier.create(channelRepository.findByChannelCode("DIRECT"))
+  void 채널_코드로_Booking_com을_조회한다() {
+    StepVerifier.create(channelRepository.findByChannelCode("BOOKING"))
         .expectNextMatches(channel ->
-            channel.getChannelName().equals("자사 홈페이지") // 채널명 검증
+            channel.getChannelName().equals("Booking.com") // 채널명 검증
                 && channel.isActive()) // 활성 상태 검증
         .verifyComplete();
   }
@@ -30,9 +30,11 @@ class ChannelRepositoryTest {
 
   @Test // findByIsActive - 비활성 채널 목록 조회 테스트
   void 비활성_채널_목록을_조회한다() {
-    // is_active = false인 채널만 조회한다 (OTA_C)
+    // is_active = false인 채널만 조회한다 (Trip.com)
     StepVerifier.create(channelRepository.findByIsActive(false))
-        .expectNextCount(1) // 비활성 채널 1개
+        .expectNextMatches(channel ->
+            channel.getChannelCode().equals("TRIP")
+                && channel.getChannelName().equals("Trip.com"))
         .verifyComplete();
   }
 }

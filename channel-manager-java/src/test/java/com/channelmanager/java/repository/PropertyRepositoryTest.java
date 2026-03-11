@@ -27,9 +27,9 @@ class PropertyRepositoryTest {
   void ID로_숙소를_조회한다() {
     StepVerifier.create(propertyRepository.findById(1L))
         .expectNextMatches(property -> // 반환된 엔티티의 필드를 검증한다
-            property.getPropertyCode().equals("SEOUL_GRAND")
-                && property.getPropertyName().equals("서울 그랜드 호텔")
-                && property.getPropertyAddress().equals("서울특별시 중구 을지로 30"))
+            property.getPropertyCode().equals("SHILLA_SEOUL")
+                && property.getPropertyName().equals("서울신라호텔")
+                && property.getPropertyAddress().equals("서울특별시 중구 동호로 249"))
         .verifyComplete();
   }
 
@@ -38,28 +38,28 @@ class PropertyRepositoryTest {
     // "서울"이 포함된 숙소를 검색한다
     StepVerifier.create(propertyRepository.findByPropertyNameContaining("서울"))
         .expectNextMatches(
-            property -> property.getPropertyCode().equals("SEOUL_GRAND")) // 서울 그랜드 호텔 1건
+            property -> property.getPropertyCode().equals("SHILLA_SEOUL")) // 서울신라호텔 1건
         .verifyComplete();
   }
 
   @Test // save - 새 숙소 저장 테스트
   void 새_숙소를_저장한다() {
     Property newProperty = Property.builder() // 빌더 패턴으로 엔티티 생성
-        .propertyCode("JEJU_BEACH")
-        .propertyName("제주 비치 호텔")
-        .propertyAddress("제주특별자치도 서귀포시 중문로 100")
+        .propertyCode("LOTTE_JEJU")
+        .propertyName("롯데호텔 제주")
+        .propertyAddress("제주특별자치도 서귀포시 중문관광로 72번길 35")
         .build();
 
     StepVerifier.create(propertyRepository.save(newProperty))
         .expectNextMatches(saved ->
             saved.getId() != null // 저장 후 자동 생성된 ID가 존재해야 한다
-                && saved.getPropertyCode().equals("JEJU_BEACH")
-                && saved.getPropertyName().equals("제주 비치 호텔"))
+                && saved.getPropertyCode().equals("LOTTE_JEJU")
+                && saved.getPropertyName().equals("롯데호텔 제주"))
         .verifyComplete();
 
     // 저장 후 삭제하여 다른 테스트에 영향을 주지 않도록 한다
     StepVerifier.create(
-        propertyRepository.findByPropertyNameContaining("제주")
+        propertyRepository.findByPropertyNameContaining("롯데")
             .flatMap(property -> propertyRepository.delete(property))
     ).verifyComplete();
   }

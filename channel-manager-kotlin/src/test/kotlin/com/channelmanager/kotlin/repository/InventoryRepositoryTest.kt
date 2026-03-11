@@ -33,8 +33,8 @@ class InventoryRepositoryTest {
             inventoryRepository.findByRoomTypeIdAndStockDate(1L, targetDate)
         )
             .expectNextMatches { inventory ->
-                inventory.totalQuantity == 10 && // 전체 10개
-                    inventory.availableQuantity == 8 // 예약 가능 8개
+                inventory.totalQuantity == 15 && // 전체 15개
+                    inventory.availableQuantity == 12 // 예약 가능 12개
             }
             .verifyComplete()
     }

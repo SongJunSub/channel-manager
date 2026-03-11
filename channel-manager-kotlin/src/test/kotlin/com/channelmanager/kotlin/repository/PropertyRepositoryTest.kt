@@ -26,9 +26,9 @@ class PropertyRepositoryTest {
     fun `ID로 숙소를 조회한다`() {
         StepVerifier.create(propertyRepository.findById(1L))
             .expectNextMatches { property -> // 반환된 엔티티의 필드를 검증한다
-                property.propertyCode == "SEOUL_GRAND" &&
-                    property.propertyName == "서울 그랜드 호텔" &&
-                    property.propertyAddress == "서울특별시 중구 을지로 30"
+                property.propertyCode == "SHILLA_SEOUL" &&
+                    property.propertyName == "서울신라호텔" &&
+                    property.propertyAddress == "서울특별시 중구 동호로 249"
             }
             .verifyComplete()
     }
@@ -37,29 +37,29 @@ class PropertyRepositoryTest {
     fun `숙소명으로 검색한다`() {
         // "서울"이 포함된 숙소를 검색한다
         StepVerifier.create(propertyRepository.findByPropertyNameContaining("서울"))
-            .expectNextMatches { it.propertyCode == "SEOUL_GRAND" } // 서울 그랜드 호텔 1건
+            .expectNextMatches { it.propertyCode == "SHILLA_SEOUL" } // 서울신라호텔 1건
             .verifyComplete()
     }
 
     @Test // save - 새 숙소 저장 테스트
     fun `새 숙소를 저장한다`() {
         val newProperty = Property( // id = null이면 INSERT
-            propertyCode = "JEJU_BEACH",
-            propertyName = "제주 비치 호텔",
-            propertyAddress = "제주특별자치도 서귀포시 중문로 100"
+            propertyCode = "LOTTE_JEJU",
+            propertyName = "롯데호텔 제주",
+            propertyAddress = "제주특별자치도 서귀포시 중문관광로 72번길 35"
         )
 
         StepVerifier.create(propertyRepository.save(newProperty))
             .expectNextMatches { saved ->
                 saved.id != null && // 저장 후 자동 생성된 ID가 존재해야 한다
-                    saved.propertyCode == "JEJU_BEACH" &&
-                    saved.propertyName == "제주 비치 호텔"
+                    saved.propertyCode == "LOTTE_JEJU" &&
+                    saved.propertyName == "롯데호텔 제주"
             }
             .verifyComplete()
 
         // 저장 후 삭제하여 다른 테스트에 영향을 주지 않도록 한다
         StepVerifier.create(
-            propertyRepository.findByPropertyNameContaining("제주")
+            propertyRepository.findByPropertyNameContaining("롯데")
                 .flatMap { propertyRepository.delete(it) }
         ).verifyComplete()
     }

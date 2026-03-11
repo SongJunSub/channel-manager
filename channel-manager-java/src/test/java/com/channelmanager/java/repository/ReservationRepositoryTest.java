@@ -14,25 +14,25 @@ class ReservationRepositoryTest {
 
   @Test // findByChannelId - 채널별 예약 목록 조회 테스트
   void 채널별_예약_목록을_조회한다() {
-    // channel_id = 1 (DIRECT)의 예약을 조회한다
+    // channel_id = 1 (DIRECT 자사 홈페이지)의 예약을 조회한다
     StepVerifier.create(reservationRepository.findByChannelId(1L))
         .expectNextMatches(
-            reservation -> reservation.getGuestName().equals("홍길동")) // DIRECT 채널 예약 1건
+            reservation -> reservation.getGuestName().equals("김민준")) // 자사 홈페이지 예약 1건
         .verifyComplete();
   }
 
   @Test // findByRoomTypeId - 객실 타입별 예약 목록 조회 테스트
   void 객실_타입별_예약_목록을_조회한다() {
-    // room_type_id = 1 (Standard)의 예약을 조회한다
+    // room_type_id = 1 (Superior Double)의 예약을 조회한다
     StepVerifier.create(reservationRepository.findByRoomTypeId(1L))
-        .expectNextCount(2) // 홍길동(CONFIRMED), 이영희(CANCELLED)
+        .expectNextCount(2) // 김민준(CONFIRMED), 田中太郎(CANCELLED)
         .verifyComplete();
   }
 
   @Test // findByStatus - CONFIRMED 상태 예약 조회 테스트
   void 확정_상태_예약_목록을_조회한다() {
     StepVerifier.create(reservationRepository.findByStatus(ReservationStatus.CONFIRMED))
-        .expectNextCount(2) // 홍길동, 김철수
+        .expectNextCount(2) // 김민준, James Wilson
         .verifyComplete();
   }
 
@@ -40,7 +40,7 @@ class ReservationRepositoryTest {
   void 취소_상태_예약_목록을_조회한다() {
     StepVerifier.create(reservationRepository.findByStatus(ReservationStatus.CANCELLED))
         .expectNextMatches(
-            reservation -> reservation.getGuestName().equals("이영희")) // 취소 예약 1건
+            reservation -> reservation.getGuestName().equals("田中太郎")) // Agoda 예약 취소 1건
         .verifyComplete();
   }
 }
