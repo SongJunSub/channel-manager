@@ -11,6 +11,7 @@ spring:
     password: postgres  # DB 비밀번호
 
   # Flyway 마이그레이션 설정 (JDBC 기반으로 동작)
+  # R2DBC 환경에서 Flyway는 별도의 JDBC URL을 지정해야 한다
   flyway:
     enabled: true  # Flyway 활성화
     url: jdbc:postgresql://localhost:5432/channel_manager  # JDBC URL (Flyway는 JDBC 사용)

@@ -19,9 +19,10 @@ dependencies {
     runtimeOnly("org.postgresql:r2dbc-postgresql")  // 런타임에만 필요한 R2DBC PostgreSQL 드라이버
 
     // === Flyway (DB 마이그레이션) ===
-    implementation("org.flywaydb:flyway-core")                 // Flyway 코어
-    implementation("org.flywaydb:flyway-database-postgresql")  // Flyway PostgreSQL 지원
-    runtimeOnly("org.postgresql:postgresql")                   // Flyway가 사용할 JDBC 드라이버
+    // Spring Boot 4.x에서는 flyway-core 대신 starter를 사용해야 자동설정이 활성화된다
+    implementation("org.springframework.boot:spring-boot-starter-flyway")           // Flyway 스타터 (자동설정 + JDBC DataSource 포함)
+    implementation("org.flywaydb:flyway-database-postgresql")                       // Flyway PostgreSQL 지원
+    runtimeOnly("org.postgresql:postgresql")                                        // Flyway가 사용할 JDBC 드라이버
 
     // === OpenAPI (Swagger) 어노테이션 ===
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")  // @Schema 등 API 문서화 어노테이션

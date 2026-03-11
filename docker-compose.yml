@@ -1,0 +1,16 @@
+# Channel Manager - 로컬 개발 환경용 Docker Compose
+services:
+  postgres:
+    image: postgres:17-alpine                        # PostgreSQL 17 경량 이미지
+    container_name: channel-manager-postgres          # 컨테이너 이름
+    environment:
+      POSTGRES_DB: channel_manager                   # 생성할 데이터베이스명
+      POSTGRES_USER: postgres                        # DB 사용자명 (application.yml과 일치)
+      POSTGRES_PASSWORD: postgres                    # DB 비밀번호 (application.yml과 일치)
+    ports:
+      - "5432:5432"                                  # 호스트:컨테이너 포트 매핑
+    volumes:
+      - channel-manager-pgdata:/var/lib/postgresql/data  # 데이터 영속화
+
+volumes:
+  channel-manager-pgdata:                            # PostgreSQL 데이터 볼륨
