@@ -14,32 +14,32 @@ import java.time.LocalDateTime; // 날짜+시간 타입
 // 객실 타입 엔티티 - room_types 테이블과 매핑
 // 하나의 숙소(Property)는 여러 객실 타입(RoomType)을 가진다 (1:N 관계)
 // R2DBC는 @ManyToOne 같은 연관관계 어노테이션이 없으므로 propertyId를 직접 저장한다
-@Schema(description = "객실 타입 정보를 나타내는 엔티티") // 엔티티 레벨 API 문서화
+@Schema(description = "객실 타입 정보를 나타내는 엔티티")
 @Data // getter, setter, toString, equals, hashCode 자동 생성
 @Builder // 빌더 패턴 제공
 @NoArgsConstructor // 기본 생성자
 @AllArgsConstructor // 전체 필드 생성자
-@Table("room_types") // 매핑할 데이터베이스 테이블명 지정
+@Table("room_types")
 public class RoomType {
 
-    @Schema(description = "객실 타입 고유 식별자 (PK)", example = "1") // PK 문서화
+    @Schema(description = "객실 타입 고유 식별자 (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
-    private Long id; // PK - null이면 INSERT, 값이 있으면 UPDATE
+    private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
-    @Schema(description = "소속 숙소 ID (FK)", example = "1") // 외래키 문서화
-    private Long propertyId; // 숙소 FK - JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
+    @Schema(description = "소속 숙소 ID (FK)", example = "1")
+    private Long propertyId; // JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
 
-    @Schema(description = "객실 타입명", example = "Deluxe") // 객실 타입 이름 문서화
-    private String name; // 객실 타입명 (예: "Standard", "Deluxe", "Suite")
+    @Schema(description = "객실 타입명", example = "Deluxe")
+    private String name;
 
-    @Schema(description = "수용 인원", example = "2", defaultValue = "2") // 기본값 문서화
+    @Schema(description = "수용 인원", example = "2", defaultValue = "2")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
-    private int capacity = 2; // 수용 인원 - 기본값 2명
+    private int capacity = 2;
 
-    @Schema(description = "기본 가격 (1박 기준)", example = "150000") // 가격 문서화
-    private BigDecimal basePrice; // 기본 가격 - BigDecimal로 금액의 정밀도를 보장한다
+    @Schema(description = "기본 가격 (1박 기준)", example = "150000")
+    private BigDecimal basePrice; // BigDecimal로 금액의 정밀도를 보장한다
 
-    @Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY) // 읽기 전용 필드 문서화
+    @Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY)
     @CreatedDate // 엔티티 생성 시 현재 시각 자동 기록
-    private LocalDateTime createdAt; // 생성 시각
+    private LocalDateTime createdAt;
 }

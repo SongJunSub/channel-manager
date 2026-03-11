@@ -10,26 +10,26 @@ import java.time.LocalDateTime // 날짜+시간 타입
 // 객실 타입 엔티티 - room_types 테이블과 매핑
 // 하나의 숙소(Property)는 여러 객실 타입(RoomType)을 가진다 (1:N 관계)
 // R2DBC는 @ManyToOne 같은 연관관계 어노테이션이 없으므로 property_id를 직접 저장한다
-@Schema(description = "객실 타입 정보를 나타내는 엔티티") // 엔티티 레벨 API 문서화
-@Table("room_types") // 매핑할 데이터베이스 테이블명 지정
+@Schema(description = "객실 타입 정보를 나타내는 엔티티")
+@Table("room_types")
 data class RoomType(
-    @field:Schema(description = "객실 타입 고유 식별자 (PK)", example = "1") // PK 문서화
+    @field:Schema(description = "객실 타입 고유 식별자 (PK)", example = "1")
     @Id // 이 필드가 PK임을 Spring Data에 알린다
-    val id: Long? = null, // PK - null이면 INSERT, 값이 있으면 UPDATE
+    val id: Long? = null, // null이면 INSERT, 값이 있으면 UPDATE
 
-    @field:Schema(description = "소속 숙소 ID (FK)", example = "1") // 외래키 문서화
-    val propertyId: Long, // 숙소 FK - JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
+    @field:Schema(description = "소속 숙소 ID (FK)", example = "1")
+    val propertyId: Long, // JPA의 @ManyToOne 대신 ID 값을 직접 저장한다
 
-    @field:Schema(description = "객실 타입명", example = "Deluxe") // 객실 타입 이름 문서화
-    val name: String, // 객실 타입명 (예: "Standard", "Deluxe", "Suite")
+    @field:Schema(description = "객실 타입명", example = "Deluxe")
+    val name: String,
 
-    @field:Schema(description = "수용 인원", example = "2", defaultValue = "2") // 기본값 문서화
-    val capacity: Int = 2, // 수용 인원 - 기본값 2명
+    @field:Schema(description = "수용 인원", example = "2", defaultValue = "2")
+    val capacity: Int = 2,
 
-    @field:Schema(description = "기본 가격 (1박 기준)", example = "150000") // 가격 문서화
-    val basePrice: BigDecimal, // 기본 가격 - BigDecimal로 금액의 정밀도를 보장한다
+    @field:Schema(description = "기본 가격 (1박 기준)", example = "150000")
+    val basePrice: BigDecimal, // BigDecimal로 금액의 정밀도를 보장한다
 
-    @field:Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY) // 읽기 전용 필드 문서화
+    @field:Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY)
     @CreatedDate // 엔티티 생성 시 현재 시각 자동 기록
-    val createdAt: LocalDateTime? = null // 생성 시각
+    val createdAt: LocalDateTime? = null
 )
