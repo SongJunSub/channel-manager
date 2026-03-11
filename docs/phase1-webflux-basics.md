@@ -8,6 +8,12 @@
 5. [Spring Data R2DBC](#5-spring-data-r2dbc)
 6. [Flyway와 R2DBC](#6-flyway와-r2dbc)
 7. [도메인 모델 설계](#7-도메인-모델-설계)
+8. [도메인 엔티티 구현: Kotlin vs Java 비교](#8-도메인-엔티티-구현-kotlin-vs-java-비교)
+9. [실무 코드 비교: JPA + QueryDSL vs R2DBC + DatabaseClient](#9-실무-코드-비교-jpa--querydsl-vs-r2dbc--databaseclient)
+
+### 별도 문서
+- [Kotlin vs Java 비교 학습 가이드](./phase1-comparison-kotlin-vs-java.md) — 변수, null 안전성, 클래스, 함수, 컬렉션, scope 함수, 코루틴 vs Reactor, Spring Boot 패턴
+- [Spring MVC vs Spring WebFlux 비교 학습 가이드](./phase1-comparison-mvc-vs-webflux.md) — 아키텍처, Controller/Service/Repository 계층, 에러 처리, 트랜잭션, 테스트, SSE, 블로킹 주의사항
 
 ---
 
@@ -640,7 +646,143 @@ CREATE INDEX idx_channel_events_created ON channel_events(created_at);
 
 ---
 
-## 8. 실무 코드 비교: JPA + QueryDSL vs R2DBC + DatabaseClient
+## 8. 도메인 엔티티 구현: Kotlin vs Java 비교
+
+이 프로젝트는 동일한 도메인을 Kotlin과 Java로 각각 구현한다.
+R2DBC 엔티티를 두 언어로 작성할 때의 차이점을 정리한다.
+
+### 8-1. 엔티티 정의 방식 비교
+
+#### Kotlin: data class
+
+```kotlin
+@Table("hotels")
+data class Hotel(
+    @Id
+    val id: Long? = null,         // val: 불변 프로퍼티 (재할당 불가)
+    val name: String,             // non-null: 반드시 값이 있어야 함
+    val address: String? = null,  // nullable + 기본값: 선택 입력
+    @CreatedDate
+    val createdAt: LocalDateTime? = null
+)
+```
+
+**data class가 자동 생성하는 것:**
+- `equals()` — 모든 프로퍼티 값 비교
+- `hashCode()` — 모든 프로퍼티 기반 해시값
+- `toString()` — `Hotel(id=1, name=서울 그랜드 호텔, ...)`
+- `copy()` — 일부 필드만 변경한 복사본 생성: `hotel.copy(name = "새 이름")`
+- `componentN()` — 구조 분해 선언: `val (id, name) = hotel`
+
+#### Java: Lombok 어노테이션
+
+```java
+@Data                  // getter, setter, toString, equals, hashCode 자동 생성
+@Builder               // 빌더 패턴: Hotel.builder().name("...").build()
+@NoArgsConstructor     // 기본 생성자 (Spring Data가 리플렉션으로 객체 생성 시 필요)
+@AllArgsConstructor    // 전체 필드 생성자 (@Builder가 내부적으로 사용)
+@Table("hotels")
+public class Hotel {
+    @Id
+    private Long id;              // private 필드 + Lombok이 getter/setter 생성
+    private String name;
+    private String address;
+    @CreatedDate
+    private LocalDateTime createdAt;
+}
+```
+
+**Lombok이 자동 생성하는 것:**
+- `@Data` → getter, setter, `toString()`, `equals()`, `hashCode()`
+- `@Builder` → `Hotel.builder().name("서울 그랜드 호텔").address("서울시").build()`
+- `@NoArgsConstructor` → `new Hotel()` (인자 없는 기본 생성자)
+- `@AllArgsConstructor` → `new Hotel(id, name, address, createdAt)` (모든 필드 생성자)
+
+### 8-2. 핵심 차이점
+
+| 항목 | Kotlin (data class) | Java (Lombok) |
+|---|---|---|
+| **불변성** | `val` → 불변 (setter 없음) | `private` + `@Data` → 가변 (setter 있음) |
+| **null 안전성** | `String` (non-null) vs `String?` (nullable) 컴파일러가 구분 | 모두 nullable, 런타임에 NPE 가능 |
+| **기본값** | `val capacity: Int = 2` 직접 지정 | `@Builder.Default private int capacity = 2;` 별도 어노테이션 필요 |
+| **객체 복사** | `hotel.copy(name = "새 이름")` 내장 | 직접 구현하거나 `@Builder`의 `toBuilder` 사용 |
+| **보일러플레이트** | 언어 자체가 지원 (외부 라이브러리 불필요) | Lombok 라이브러리 의존 (컴파일 시 코드 생성) |
+| **생성자** | primary constructor로 모든 필드 선언 | `@NoArgsConstructor` + `@AllArgsConstructor` 조합 |
+| **구조 분해** | `val (id, name) = hotel` 기본 지원 | 미지원 |
+
+### 8-3. 객체 생성 방식 비교
+
+```kotlin
+// === Kotlin: 생성자에서 직접 생성 ===
+val hotel = Hotel(
+    name = "서울 그랜드 호텔",    // named argument로 가독성 확보
+    address = "서울시 강남구"
+)
+// id, createdAt은 기본값(null)이 적용된다
+
+// 일부 필드만 변경한 복사본 생성
+val updated = hotel.copy(name = "부산 그랜드 호텔")
+```
+
+```java
+// === Java: 빌더 패턴으로 생성 ===
+Hotel hotel = Hotel.builder()
+    .name("서울 그랜드 호텔")     // 빌더 메서드 체인
+    .address("서울시 강남구")
+    .build();
+// id, createdAt은 null이 된다
+
+// 일부 필드만 변경하려면 새로 빌드해야 한다
+Hotel updated = Hotel.builder()
+    .id(hotel.getId())
+    .name("부산 그랜드 호텔")
+    .address(hotel.getAddress())
+    .createdAt(hotel.getCreatedAt())
+    .build();
+```
+
+### 8-4. R2DBC 엔티티에서의 주의점 (Kotlin, Java 공통)
+
+**1. `@Id` 필드가 null이면 INSERT, 값이 있으면 UPDATE**
+
+```
+// Spring Data R2DBC의 내부 판단 로직:
+save(entity) 호출 시
+  → entity.id == null  → INSERT (새 엔티티)
+  → entity.id != null  → UPDATE (기존 엔티티)
+```
+
+**2. 연관관계 어노테이션 없음**
+
+```
+// JPA 방식 (사용 불가)
+@ManyToOne
+private Hotel hotel;           // 객체 참조
+
+// R2DBC 방식 (이 프로젝트)
+private Long hotelId;          // ID 값만 저장, 필요 시 별도 쿼리로 조회
+```
+
+**3. `@CreatedDate`, `@LastModifiedDate` 사용 시 R2DBC Auditing 설정 필요**
+
+```kotlin
+// @EnableR2dbcAuditing 어노테이션을 설정 클래스에 추가해야 동작한다
+@Configuration
+@EnableR2dbcAuditing     // 이 설정이 없으면 @CreatedDate, @LastModifiedDate가 동작하지 않는다
+class R2dbcConfig
+```
+
+**4. enum은 String으로 저장**
+
+```
+// DB 컬럼: status VARCHAR(50)
+// 코드: val status: String = ReservationStatus.CONFIRMED.name
+// R2DBC는 enum을 자동 변환하지 않으므로, enum의 name() 값을 String으로 저장한다
+```
+
+---
+
+## 9. 실무 코드 비교: JPA + QueryDSL vs R2DBC + DatabaseClient
 
 이 장에서는 실제 호텔 CRS(Central Reservation System) 프로젝트의 `ProfileQueryRepository.findProfiles()` 메서드를 분석하고,
 동일한 패턴을 R2DBC + DatabaseClient로 어떻게 전환하는지 비교한다.
