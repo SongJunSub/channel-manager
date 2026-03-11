@@ -27,7 +27,7 @@ public class ChannelEvent {
     private Long id; // null이면 INSERT, 값이 있으면 UPDATE
 
     @Schema(description = "이벤트 타입 (INVENTORY_UPDATED, RESERVATION_CREATED, RESERVATION_CANCELLED, CHANNEL_SYNCED)", example = "RESERVATION_CREATED")
-    private String eventType; // EventType enum의 name() 값을 저장한다
+    private EventType eventType;
 
     @Schema(description = "관련 채널 ID (FK)", example = "1", nullable = true)
     private Long channelId;

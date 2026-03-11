@@ -48,7 +48,7 @@ public class Reservation {
     private int quantity = 1;
 
     @Schema(description = "예약 상태 (CONFIRMED, CANCELLED)", example = "CONFIRMED")
-    private String status; // ReservationStatus enum의 name() 값을 저장한다
+    private ReservationStatus status;
 
     @Schema(description = "총 금액", example = "300000", nullable = true)
     private BigDecimal totalPrice;

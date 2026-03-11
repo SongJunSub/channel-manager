@@ -38,7 +38,7 @@ data class Reservation(
     val quantity: Int = 1,
 
     @field:Schema(description = "예약 상태 (CONFIRMED, CANCELLED)", example = "CONFIRMED")
-    val status: String, // ReservationStatus enum의 name() 값을 저장한다
+    val status: ReservationStatus,
 
     @field:Schema(description = "총 금액", example = "300000", nullable = true)
     val totalPrice: BigDecimal? = null,
