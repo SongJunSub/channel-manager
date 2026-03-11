@@ -7,7 +7,7 @@
 
 ## 기술 스택
 - 언어: **Kotlin + Java** (동일 로직을 두 언어로 구현)
-- 프레임워크: Spring Boot 3.x + WebFlux
+- 프레임워크: Spring Boot 4.x + WebFlux
 - DB: PostgreSQL + Spring Data R2DBC
 - 마이그레이션: Flyway
 - 빌드: Gradle (Kotlin DSL)
@@ -60,7 +60,7 @@ channel-manager/
 - Property: 숙소 정보
 - RoomType: 객실 타입 (Standard, Deluxe, Suite)
 - Inventory: 날짜별/객실타입별 재고
-- Channel: 판매 채널 (DIRECT, OTA_A, OTA_B)
+- Channel: 판매 채널 (DIRECT, Booking.com, Agoda, Trip.com)
 - Reservation: 예약 정보
 - ChannelEvent: 모든 변경 이력 (이벤트)
 
@@ -75,6 +75,29 @@ channel-manager/
 | 6 | 실시간 대시보드 | EventSource, 프론트 |
 | 7 | 예약 취소 & 재고 복구 | 보상 트랜잭션 |
 | 8 | 통계 & 리포트 | window, buffer, groupBy |
+
+## 진행 상황
+
+### Phase 1 - 프로젝트 초기화 & 도메인 설계 ✅
+- 개념 MD 작성 (phase1-webflux-basics.md, comparison 2개)
+- Gradle 멀티 모듈 프로젝트 초기화
+- 도메인 엔티티 구현 (Kotlin 6개 + Java 6개, @Schema 문서화)
+- Flyway 마이그레이션 SQL (V1~V7, V7은 샘플 데이터)
+- R2DBC Repository 정의 (Kotlin 6개 + Java 6개)
+- Repository 통합 테스트 (Kotlin 6개 + Java 6개, StepVerifier)
+- Docker PostgreSQL 환경 구성 (postgres:17-alpine)
+
+### Phase 2 - 인벤토리 관리 API 🔜
+- 다음 시작 단계: ① 개념 MD 작성 (Mono/Flux 기본 연산)
+
+## 환경 정보
+- Java: 25 (OpenJDK 25.0.2)
+- Kotlin: 2.3.10
+- Spring Boot: 4.0.3
+- Gradle: 9.4.0
+- PostgreSQL: 17-alpine (Docker)
+- Kotlin 모듈 포트: 8080, Java 모듈 포트: 8081
+- Spring Boot 4.x Flyway: `spring-boot-starter-flyway` + `spring.flyway.url` JDBC URL 명시 필요
 
 ## Git
 - 리포지토리: https://github.com/SongJunSub/channel-manager
