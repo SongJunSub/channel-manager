@@ -1,0 +1,39 @@
+package com.channelmanager.kotlin.repository // 테스트 패키지
+
+import org.junit.jupiter.api.Test // JUnit 5 테스트 어노테이션
+import org.springframework.beans.factory.annotation.Autowired // 의존성 주입 어노테이션
+import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import reactor.test.StepVerifier // Reactor 스트림 검증 도구
+
+@SpringBootTest
+class ChannelRepositoryTest {
+
+    @Autowired // Spring이 ChannelRepository 구현체를 자동 주입한다
+    private lateinit var channelRepository: ChannelRepository
+
+    @Test // findByChannelCode - 채널 코드로 단건 조회 테스트
+    fun `채널 코드로 조회한다`() {
+        StepVerifier.create(channelRepository.findByChannelCode("DIRECT"))
+            .expectNextMatches { channel ->
+                channel.channelName == "자사 홈페이지" && // 채널명 검증
+                    channel.isActive // 활성 상태 검증
+            }
+            .verifyComplete()
+    }
+
+    @Test // findByIsActive - 활성 채널 목록 조회 테스트
+    fun `활성 채널 목록을 조회한다`() {
+        // is_active = true인 채널만 조회한다 (DIRECT, OTA_A, OTA_B)
+        StepVerifier.create(channelRepository.findByIsActive(true))
+            .expectNextCount(3) // 활성 채널 3개
+            .verifyComplete()
+    }
+
+    @Test // findByIsActive - 비활성 채널 목록 조회 테스트
+    fun `비활성 채널 목록을 조회한다`() {
+        // is_active = false인 채널만 조회한다 (OTA_C)
+        StepVerifier.create(channelRepository.findByIsActive(false))
+            .expectNextCount(1) // 비활성 채널 1개
+            .verifyComplete()
+    }
+}
