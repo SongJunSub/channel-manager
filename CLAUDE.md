@@ -87,8 +87,22 @@ channel-manager/
 - Repository 통합 테스트 (Kotlin 6개 + Java 6개, StepVerifier)
 - Docker PostgreSQL 환경 구성 (postgres:17-alpine)
 
-### Phase 2 - 인벤토리 관리 API 🔜
-- 다음 시작 단계: ① 개념 MD 작성 (Mono/Flux 기본 연산)
+### Phase 2 - 인벤토리 관리 API ✅
+- 개념 MD 작성 (phase2-mono-flux.md)
+- 인벤토리 CRUD + 일괄생성 API 구현 (Kotlin + Java, 6개 엔드포인트)
+- DTO (record/data class), Service, Controller, GlobalExceptionHandler
+- R2dbcConfig (@EnableR2dbcAuditing) 추가
+- WebTestClient 통합 테스트 (Kotlin 11개 + Java 11개)
+- 동작 확인 완료 (Kotlin:8080, Java:8081 동일 응답)
+
+### Phase 3 - 채널 시뮬레이터 🔜
+- 개념 MD 작성 (phase3-channel-simulator.md)
+- 예약 API 구현 (Kotlin + Java, ReservationService/Controller)
+- 채널 시뮬레이터 구현 (Kotlin + Java, ChannelSimulator, Flux.interval + WebClient)
+- 시뮬레이터 제어 API (SimulatorController: 시작/중지/상태)
+- WebClient 설정 (WebClientConfig)
+- 통합 테스트 (Kotlin 11개 + Java 11개)
+- 다음: ④ 동작 확인
 
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)

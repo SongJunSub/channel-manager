@@ -14,10 +14,13 @@ class ChannelEventRepositoryTest {
 
     @Test // findByEventType - 이벤트 타입별 조회 테스트
     fun `예약 생성 이벤트를 조회한다`() {
+        // V7 샘플: RESERVATION_CREATED 이벤트 최소 2건 (홍길동, 김철수)
+        // thenConsumeWhile(true): 다른 테스트가 생성한 추가 이벤트를 무시한다
         StepVerifier.create(
             channelEventRepository.findByEventType(EventType.RESERVATION_CREATED)
         )
-            .expectNextCount(2) // 홍길동, 김철수 예약 생성 이벤트 2건
+            .expectNextCount(2) // V7 샘플 데이터 최소 2건
+            .thenConsumeWhile { true } // 추가 데이터 소비
             .verifyComplete()
     }
 
@@ -30,13 +33,17 @@ class ChannelEventRepositoryTest {
                 event.channelId == null && // 재고 변경은 특정 채널과 무관
                     event.eventPayload != null // JSON 페이로드 존재
             }
+            .thenConsumeWhile { true } // 추가 데이터 소비
             .verifyComplete()
     }
 
     @Test // findAllByOrderByCreatedAtDesc - 최신순 이벤트 조회 테스트
     fun `이벤트를 최신순으로 조회한다`() {
+        // V7 샘플: 전체 이벤트 최소 5건
+        // thenConsumeWhile(true): 다른 테스트가 생성한 추가 이벤트를 무시한다
         StepVerifier.create(channelEventRepository.findAllByOrderByCreatedAtDesc())
-            .expectNextCount(5) // 전체 이벤트 5건
+            .expectNextCount(5) // V7 샘플 데이터 최소 5건
+            .thenConsumeWhile { true } // 추가 데이터 소비
             .verifyComplete()
     }
 }
