@@ -95,14 +95,14 @@ channel-manager/
 - WebTestClient 통합 테스트 (Kotlin 11개 + Java 11개)
 - 동작 확인 완료 (Kotlin:8080, Java:8081 동일 응답)
 
-### Phase 3 - 채널 시뮬레이터 🔜
+### Phase 3 - 채널 시뮬레이터 ✅
 - 개념 MD 작성 (phase3-channel-simulator.md)
 - 예약 API 구현 (Kotlin + Java, ReservationService/Controller)
 - 채널 시뮬레이터 구현 (Kotlin + Java, ChannelSimulator, Flux.interval + WebClient)
 - 시뮬레이터 제어 API (SimulatorController: 시작/중지/상태)
 - WebClient 설정 (WebClientConfig)
 - 통합 테스트 (Kotlin 11개 + Java 11개)
-- 다음: ④ 동작 확인
+- 동작 확인 완료 (Kotlin:8080, Java:8081 시뮬레이터 정상 동작)
 
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
