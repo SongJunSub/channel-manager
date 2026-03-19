@@ -22,13 +22,15 @@ import java.math.BigDecimal // 금액 처리용 정밀 숫자 타입
 // 예약 서비스 - 예약 생성 + 재고 차감 + 이벤트 기록을 담당한다
 // 여러 테이블(Reservation, Inventory, ChannelEvent)에 걸친 트랜잭션이 필요하다
 // @Service로 Spring 빈으로 등록하고, 생성자 주입으로 의존성을 받는다
+// Phase 4: EventPublisher를 주입받아 이벤트 저장 후 Sinks에도 발행한다
 @Service
 class ReservationService(
     private val reservationRepository: ReservationRepository,     // 예약 DB 접근
     private val channelRepository: ChannelRepository,             // 채널 DB 접근
     private val roomTypeRepository: RoomTypeRepository,           // 객실 타입 DB 접근
     private val inventoryRepository: InventoryRepository,         // 재고 DB 접근
-    private val channelEventRepository: ChannelEventRepository    // 이벤트 DB 접근
+    private val channelEventRepository: ChannelEventRepository,   // 이벤트 DB 접근
+    private val eventPublisher: EventPublisher                    // Phase 4: 이벤트 발행 서비스
 ) {
 
     // 예약 생성 — 핵심 비즈니스 로직
@@ -100,7 +102,14 @@ class ReservationService(
                                             """"checkIn":"${request.checkInDate}",""" +
                                             """"checkOut":"${request.checkOutDate}"}"""
                                     )
-                                ).thenReturn(reservation) // 이벤트 저장 결과는 무시하고 예약 반환
+                                )
+                                .doOnNext { savedEvent -> // Phase 4: DB 저장 후 Sinks에 발행
+                                    // doOnNext: 스트림 흐름을 변경하지 않는 부수 효과(side-effect)
+                                    // DB 저장이 성공한 후에만 Sinks에 발행한다
+                                    // 발행 실패가 전체 트랜잭션을 롤백시키지 않도록 fire-and-forget
+                                    eventPublisher.publish(savedEvent) // Sinks에 이벤트 발행
+                                }
+                                .thenReturn(reservation) // 이벤트 저장 결과는 무시하고 예약 반환
                             }
                             .map { reservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(reservation, channel.channelCode)
@@ -111,8 +120,10 @@ class ReservationService(
     // 재고 차감 — 체크인 ~ 체크아웃 기간의 모든 날짜에서 재고를 차감한다
     // 체크아웃 당일은 숙박하지 않으므로 재고 차감에서 제외한다 (datesUntil은 종료일 미포함)
     // concatMap: 날짜 순서대로 순차 처리하여 동시성 문제를 줄인다
+    // Phase 4: findByRoomTypeIdAndStockDateForUpdate로 비관적 잠금 적용
+    //   SELECT ... FOR UPDATE로 행 잠금을 걸어 동시에 같은 재고를 차감하는 Lost Update를 방지한다
     // 각 날짜에 대해:
-    //   1. 해당 날짜의 재고 조회 (없으면 404)
+    //   1. 해당 날짜의 재고 조회 + 행 잠금 (없으면 404)
     //   2. 가용 수량 확인 (부족하면 400)
     //   3. 가용 수량 차감 후 저장
     private fun decreaseInventory(
@@ -122,7 +133,7 @@ class ReservationService(
             request.checkInDate.datesUntil(request.checkOutDate) // 체크인 ~ 체크아웃 전날
         )
         .concatMap { date -> // 각 날짜에 대해 순차적으로 재고 차감
-            inventoryRepository.findByRoomTypeIdAndStockDate( // 해당 날짜의 재고 조회
+            inventoryRepository.findByRoomTypeIdAndStockDateForUpdate( // Phase 4: FOR UPDATE 잠금 조회
                 request.roomTypeId, date
             )
             .switchIfEmpty(Mono.error( // 재고가 없으면 404 에러

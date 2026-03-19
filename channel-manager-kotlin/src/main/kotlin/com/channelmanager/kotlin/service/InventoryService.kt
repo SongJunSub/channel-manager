@@ -1,5 +1,7 @@
 package com.channelmanager.kotlin.service // 서비스 패키지 - 비즈니스 로직 계층
 
+import com.channelmanager.kotlin.domain.ChannelEvent // Phase 4: 채널 이벤트 엔티티
+import com.channelmanager.kotlin.domain.EventType // Phase 4: 이벤트 타입 enum
 import com.channelmanager.kotlin.domain.Inventory // 재고 엔티티
 import com.channelmanager.kotlin.dto.InventoryBulkCreateRequest // 기간별 일괄 생성 요청 DTO
 import com.channelmanager.kotlin.dto.InventoryCreateRequest // 단건 생성 요청 DTO
@@ -7,6 +9,7 @@ import com.channelmanager.kotlin.dto.InventoryResponse // 응답 DTO
 import com.channelmanager.kotlin.dto.InventoryUpdateRequest // 수정 요청 DTO
 import com.channelmanager.kotlin.exception.BadRequestException // 400 Bad Request 예외
 import com.channelmanager.kotlin.exception.NotFoundException // 404 Not Found 예외
+import com.channelmanager.kotlin.repository.ChannelEventRepository // Phase 4: 이벤트 리포지토리
 import com.channelmanager.kotlin.repository.InventoryRepository // 재고 리포지토리
 import com.channelmanager.kotlin.repository.RoomTypeRepository // 객실 타입 리포지토리
 import org.springframework.stereotype.Service // 서비스 계층 어노테이션
@@ -18,10 +21,13 @@ import java.time.LocalDate // 날짜 타입
 // 인벤토리 서비스 - 재고 관리 비즈니스 로직을 담당한다
 // @Service로 Spring 빈으로 등록하고, 생성자 주입으로 의존성을 받는다
 // Kotlin에서는 primary constructor에 val로 선언하면 자동으로 생성자 주입이 된다
+// Phase 4: EventPublisher, ChannelEventRepository를 추가하여 재고 변경 이벤트를 발행한다
 @Service
 class InventoryService(
-    private val inventoryRepository: InventoryRepository, // 재고 DB 접근
-    private val roomTypeRepository: RoomTypeRepository    // 객실 타입 DB 접근 (존재 여부 검증용)
+    private val inventoryRepository: InventoryRepository,       // 재고 DB 접근
+    private val roomTypeRepository: RoomTypeRepository,         // 객실 타입 DB 접근 (존재 여부 검증용)
+    private val channelEventRepository: ChannelEventRepository, // Phase 4: 이벤트 DB 저장
+    private val eventPublisher: EventPublisher                  // Phase 4: 이벤트 발행 서비스
 ) {
 
     // ===== 조회 =====
@@ -132,6 +138,21 @@ class InventoryService(
                 // 비즈니스 규칙 검증: 가용 수량은 0 이상, 전체 수량 이하여야 한다
                 validateQuantity(updated.availableQuantity, updated.totalQuantity)
                     .then(inventoryRepository.save(updated)) // 검증 통과 후 저장
+                    .flatMap { savedInventory -> // Phase 4: 재고 변경 이벤트 발행
+                        // INVENTORY_UPDATED 이벤트를 DB에 저장하고 Sinks에 발행한다
+                        // eventPayload에 변경 전/후 가용 수량을 JSON으로 기록한다
+                        channelEventRepository.save(
+                            ChannelEvent(
+                                eventType = EventType.INVENTORY_UPDATED,     // 재고 변경 이벤트
+                                roomTypeId = savedInventory.roomTypeId,      // 객실 타입 ID
+                                eventPayload = """{"before":${inventory.availableQuantity},""" +
+                                    """"after":${savedInventory.availableQuantity},""" +
+                                    """"stockDate":"${savedInventory.stockDate}"}"""
+                            )
+                        )
+                        .doOnNext { eventPublisher.publish(it) } // Sinks에 발행 (부수 효과)
+                        .thenReturn(savedInventory) // 이벤트 저장 결과 무시, 재고 반환
+                    }
             }
             .map { InventoryResponse.from(it) } // 저장 결과를 DTO로 변환
 
