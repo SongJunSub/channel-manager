@@ -26,6 +26,7 @@ import java.math.BigDecimal; // 금액 처리용 정밀 숫자 타입
 // @RequiredArgsConstructor: Lombok이 final 필드에 대한 생성자를 자동 생성한다
 // Kotlin에서는 primary constructor에 val로 선언하지만,
 // Java에서는 @RequiredArgsConstructor + private final 필드로 동일한 효과를 얻는다
+// Phase 4: EventPublisher를 주입받아 이벤트 저장 후 Sinks에도 발행한다
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -35,6 +36,7 @@ public class ReservationService {
     private final RoomTypeRepository roomTypeRepository;           // 객실 타입 DB 접근
     private final InventoryRepository inventoryRepository;         // 재고 DB 접근
     private final ChannelEventRepository channelEventRepository;   // 이벤트 DB 접근
+    private final EventPublisher eventPublisher;                   // Phase 4: 이벤트 발행 서비스
 
     // 예약 생성 — 핵심 비즈니스 로직
     // 7단계의 Reactive 체인으로 구성된다:
@@ -105,7 +107,16 @@ public class ReservationService {
                                             "\"checkOut\":\"" + request.checkOutDate() + "\"}"
                                         )
                                         .build()
-                                ).thenReturn(reservation) // 이벤트 저장 결과는 무시하고 예약 반환
+                                )
+                                .doOnNext(savedEvent -> // Phase 4: DB 저장 후 Sinks에 발행
+                                    // doOnNext: 스트림 흐름을 변경하지 않는 부수 효과(side-effect)
+                                    // DB 저장이 성공한 후에만 Sinks에 발행한다
+                                    // 발행 실패가 전체 트랜잭션을 롤백시키지 않도록 fire-and-forget
+                                    // Kotlin에서는 { eventPublisher.publish(it) }이지만,
+                                    // Java에서는 savedEvent -> eventPublisher.publish(savedEvent)
+                                    eventPublisher.publish(savedEvent) // Sinks에 이벤트 발행
+                                )
+                                .thenReturn(reservation) // 이벤트 저장 결과는 무시하고 예약 반환
                             )
                             .map(reservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(
@@ -119,6 +130,8 @@ public class ReservationService {
     // 재고 차감 — 체크인 ~ 체크아웃 기간의 모든 날짜에서 재고를 차감한다
     // 체크아웃 당일은 숙박하지 않으므로 재고 차감에서 제외한다 (datesUntil은 종료일 미포함)
     // concatMap: 날짜 순서대로 순차 처리하여 동시성 문제를 줄인다
+    // Phase 4: findByRoomTypeIdAndStockDateForUpdate로 비관적 잠금 적용
+    //   SELECT ... FOR UPDATE로 행 잠금을 걸어 동시에 같은 재고를 차감하는 Lost Update를 방지한다
     // Kotlin에서는 Flux.fromStream(request.checkInDate.datesUntil(...))로 호출하지만,
     // Java에서는 request.checkInDate().datesUntil(...)로 record 접근자를 사용한다
     private Mono<Void> decreaseInventory(
@@ -127,7 +140,7 @@ public class ReservationService {
                 request.checkInDate().datesUntil(request.checkOutDate()) // 체크인 ~ 체크아웃 전날
             )
             .concatMap(date -> // 각 날짜에 대해 순차적으로 재고 차감
-                inventoryRepository.findByRoomTypeIdAndStockDate( // 해당 날짜의 재고 조회
+                inventoryRepository.findByRoomTypeIdAndStockDateForUpdate( // Phase 4: FOR UPDATE 잠금 조회
                     request.roomTypeId(), date
                 )
                 .switchIfEmpty(Mono.error(new NotFoundException( // 재고가 없으면 404 에러

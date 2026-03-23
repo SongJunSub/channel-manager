@@ -1,5 +1,7 @@
 package com.channelmanager.java.service; // 서비스 패키지 - 비즈니스 로직 계층
 
+import com.channelmanager.java.domain.ChannelEvent; // Phase 4: 채널 이벤트 엔티티
+import com.channelmanager.java.domain.EventType; // Phase 4: 이벤트 타입 enum
 import com.channelmanager.java.domain.Inventory; // 재고 엔티티
 import com.channelmanager.java.dto.InventoryBulkCreateRequest; // 기간별 일괄 생성 요청 DTO
 import com.channelmanager.java.dto.InventoryCreateRequest; // 단건 생성 요청 DTO
@@ -7,6 +9,7 @@ import com.channelmanager.java.dto.InventoryResponse; // 응답 DTO
 import com.channelmanager.java.dto.InventoryUpdateRequest; // 수정 요청 DTO
 import com.channelmanager.java.exception.BadRequestException; // 400 Bad Request 예외
 import com.channelmanager.java.exception.NotFoundException; // 404 Not Found 예외
+import com.channelmanager.java.repository.ChannelEventRepository; // Phase 4: 이벤트 리포지토리
 import com.channelmanager.java.repository.InventoryRepository; // 재고 리포지토리
 import com.channelmanager.java.repository.RoomTypeRepository; // 객실 타입 리포지토리
 import lombok.RequiredArgsConstructor; // final 필드 생성자 자동 생성 (Lombok)
@@ -21,12 +24,15 @@ import java.time.LocalDate; // 날짜 타입
 // @RequiredArgsConstructor: Lombok이 final 필드에 대한 생성자를 자동 생성한다
 // Kotlin에서는 primary constructor에 val로 선언하지만,
 // Java에서는 @RequiredArgsConstructor + private final 필드로 동일한 효과를 얻는다
+// Phase 4: EventPublisher, ChannelEventRepository를 추가하여 재고 변경 이벤트를 발행한다
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
 
-    private final InventoryRepository inventoryRepository; // 재고 DB 접근
-    private final RoomTypeRepository roomTypeRepository;   // 객실 타입 DB 접근 (존재 여부 검증용)
+    private final InventoryRepository inventoryRepository;       // 재고 DB 접근
+    private final RoomTypeRepository roomTypeRepository;         // 객실 타입 DB 접근 (존재 여부 검증용)
+    private final ChannelEventRepository channelEventRepository; // Phase 4: 이벤트 DB 저장
+    private final EventPublisher eventPublisher;                 // Phase 4: 이벤트 발행 서비스
 
     // ===== 조회 =====
 
@@ -126,6 +132,10 @@ public class InventoryService {
         return inventoryRepository.findById(id) // 기존 재고 조회
             .switchIfEmpty(Mono.error(new NotFoundException("재고를 찾을 수 없습니다. id=" + id))) // 없으면 404
             .flatMap(inventory -> { // 조회된 재고에 대해 수정 작업 수행
+                // Phase 4: 변경 전 가용 수량을 보관한다 (이벤트 페이로드에 사용)
+                // Kotlin에서는 copy()가 원본을 보존하지만,
+                // Java에서는 setter가 원본을 직접 변경하므로 변경 전에 값을 보관해야 한다
+                int beforeQuantity = inventory.getAvailableQuantity(); // 변경 전 가용 수량 보관
                 // Partial Update: null이 아닌 필드만 업데이트한다
                 // Kotlin에서는 copy()와 엘비스 연산자(?:)를 사용하지만,
                 // Java에서는 null 체크 후 setter로 값을 변경한다
@@ -136,8 +146,27 @@ public class InventoryService {
                     inventory.setAvailableQuantity(request.availableQuantity()); // setter로 값 변경
                 }
                 // 비즈니스 규칙 검증: 가용 수량은 0 이상, 전체 수량 이하여야 한다
+                // Phase 4: 검증 통과 후 저장 → 이벤트 발행 단계가 추가된다
                 return validateQuantity(inventory.getAvailableQuantity(), inventory.getTotalQuantity())
-                    .then(inventoryRepository.save(inventory)); // 검증 통과 후 저장
+                    .then(inventoryRepository.save(inventory)) // 검증 통과 후 저장
+                    .flatMap(savedInventory -> // Phase 4: 재고 변경 이벤트 발행
+                        // INVENTORY_UPDATED 이벤트를 DB에 저장하고 Sinks에 발행한다
+                        // eventPayload에 변경 전/후 가용 수량을 JSON으로 기록한다
+                        // Kotlin에서는 copy()로 변경 전 값을 유지하지만,
+                        // Java에서는 변경 전 값을 별도 변수(beforeQuantity)에 보관한다
+                        channelEventRepository.save(
+                            ChannelEvent.builder()
+                                .eventType(EventType.INVENTORY_UPDATED)     // 재고 변경 이벤트
+                                .roomTypeId(savedInventory.getRoomTypeId()) // 객실 타입 ID
+                                .eventPayload(
+                                    "{\"before\":" + beforeQuantity + "," +
+                                    "\"after\":" + savedInventory.getAvailableQuantity() + "," +
+                                    "\"stockDate\":\"" + savedInventory.getStockDate() + "\"}")
+                                .build()
+                        )
+                        .doOnNext(event -> eventPublisher.publish(event)) // Sinks에 발행 (부수 효과)
+                        .thenReturn(savedInventory) // 이벤트 저장 결과 무시, 재고 반환
+                    );
             })
             .map(InventoryResponse::from); // 저장 결과를 DTO로 변환
     }
