@@ -104,6 +104,20 @@ channel-manager/
 - 통합 테스트 (Kotlin 11개 + Java 11개)
 - 동작 확인 완료 (Kotlin:8080, Java:8081 시뮬레이터 정상 동작)
 
+### Phase 4 - 스트림 통합 & 재고 동기화 ✅
+- 개념 MD 작성 (phase4-stream-integration.md)
+- EventPublisher: Sinks.many().multicast().onBackpressureBuffer() 이벤트 허브
+- InventorySyncService: Flux.merge 이벤트 스트림 구독, 채널 동기화
+- 비관적 잠금: FOR UPDATE 쿼리로 동시성 제어
+- 통합 테스트 (Kotlin + Java, EventPublisher/InventorySyncService)
+
+### Phase 5 - SSE 이벤트 발행 ✅
+- 개념 MD 작성 (phase5-sse.md)
+- EventResponse DTO (Kotlin data class + Java record)
+- EventStreamController: GET /api/events/stream (SSE), GET /api/events (최근 이벤트)
+- SSE 구현: ServerSentEvent<EventResponse>, heartbeat(30초), Flux.merge
+- 통합 테스트 (Kotlin 6개 + Java 6개, StepVerifier + WebTestClient)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
