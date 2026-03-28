@@ -1,0 +1,400 @@
+/* ==============================
+   CSS 변수 (Custom Properties)
+   ============================== */
+/* :root — 전역 CSS 변수 선언. 색상과 간격을 변수로 관리하여 일관성을 유지한다 */
+:root {
+    /* 기본 색상 */
+    --color-bg: #f5f7fa;           /* 페이지 배경색 — 밝은 회색 */
+    --color-card: #ffffff;          /* 카드 배경색 — 흰색 */
+    --color-text: #1a1a2e;          /* 기본 텍스트 — 진한 남색 */
+    --color-text-secondary: #6b7280; /* 보조 텍스트 — 중간 회색 */
+    --color-border: #e5e7eb;        /* 테두리 — 밝은 회색 */
+
+    /* 이벤트 타입별 색상 — Phase 6 개념 MD의 색상 매핑과 일치시킨다 */
+    --color-reservation-created: #10b981;  /* 초록 — 예약 생성 */
+    --color-inventory-updated: #3b82f6;    /* 파랑 — 재고 변경 */
+    --color-channel-synced: #f59e0b;       /* 노랑 — 채널 동기화 */
+    --color-reservation-cancelled: #ef4444; /* 빨강 — 예약 취소 */
+
+    /* 연결 상태 색상 */
+    --color-connected: #10b981;     /* 연결됨 — 초록 */
+    --color-connecting: #f59e0b;    /* 연결 중 — 노랑 */
+    --color-disconnected: #ef4444;  /* 연결 끊김 — 빨강 */
+
+    /* 간격 */
+    --spacing-sm: 8px;   /* 작은 간격 */
+    --spacing-md: 16px;  /* 중간 간격 */
+    --spacing-lg: 24px;  /* 큰 간격 */
+
+    /* 그림자 */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08); /* 카드 그림자 — 미세한 부유감 */
+}
+
+/* ==============================
+   기본 리셋 및 전역 스타일
+   ============================== */
+/* 모든 요소의 box-sizing을 border-box로 설정한다 */
+/* padding과 border가 width에 포함되어 레이아웃 계산이 직관적이다 */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* body — 페이지 전체 기본 스타일 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* 시스템 폰트 스택 */
+    background-color: var(--color-bg); /* 밝은 회색 배경 */
+    color: var(--color-text);          /* 진한 남색 텍스트 */
+    line-height: 1.6;                  /* 줄 간격 — 가독성 확보 */
+    min-height: 100vh;                 /* 최소 높이 — 뷰포트 전체 */
+}
+
+/* ==============================
+   헤더
+   ============================== */
+/* header — 페이지 상단 고정 영역. 제목과 연결 상태를 표시한다 */
+.header {
+    background-color: var(--color-card);     /* 흰색 배경 */
+    border-bottom: 1px solid var(--color-border); /* 하단 구분선 */
+    padding: var(--spacing-md) var(--spacing-lg); /* 내부 여백 */
+    display: flex;                           /* 가로 배치 — 제목과 상태를 양 끝에 */
+    justify-content: space-between;          /* 양쪽 끝으로 정렬 */
+    align-items: center;                     /* 세로 중앙 정렬 */
+    box-shadow: var(--shadow-card);          /* 미세한 그림자 */
+}
+
+/* 헤더 제목 */
+.header__title {
+    font-size: 1.25rem; /* 제목 크기 */
+    font-weight: 700;   /* 굵은 글씨 */
+}
+
+/* 연결 상태 영역 — 인디케이터 점 + 텍스트를 가로로 배치한다 */
+.header__status {
+    display: flex;      /* 가로 배치 */
+    align-items: center; /* 세로 중앙 정렬 */
+    gap: var(--spacing-sm); /* 점과 텍스트 사이 간격 */
+    font-size: 0.875rem;    /* 작은 글씨 */
+}
+
+/* ==============================
+   연결 상태 인디케이터 (점)
+   ============================== */
+/* 동그란 점으로 SSE 연결 상태를 시각적으로 표시한다 */
+.status-dot {
+    width: 10px;        /* 점 크기 */
+    height: 10px;
+    border-radius: 50%; /* 원형 */
+    display: inline-block;
+}
+
+/* 연결됨 — 초록 점 */
+.status-dot--connected {
+    background-color: var(--color-connected);
+    /* box-shadow로 점 주위에 은은한 글로우 효과를 준다 */
+    box-shadow: 0 0 6px var(--color-connected);
+}
+
+/* 연결 중 — 노랑 점 + 깜빡임 애니메이션 */
+.status-dot--connecting {
+    background-color: var(--color-connecting);
+    animation: pulse 1.5s infinite; /* 1.5초 간격 깜빡임 */
+}
+
+/* 연결 끊김 — 빨강 점 */
+.status-dot--disconnected {
+    background-color: var(--color-disconnected);
+}
+
+/* 깜빡임 애니메이션 정의 — opacity를 0.3 ↔ 1로 반복한다 */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* ==============================
+   메인 컨텐츠 영역
+   ============================== */
+/* main — 헤더 아래 전체 컨텐츠 영역 */
+.main {
+    max-width: 1200px;             /* 최대 너비 제한 — 너무 넓으면 가독성이 떨어진다 */
+    margin: var(--spacing-lg) auto; /* 상하 간격 + 좌우 자동 중앙 정렬 */
+    padding: 0 var(--spacing-lg);  /* 좌우 내부 여백 */
+    display: flex;                  /* 세로 배치 — 제어 패널 위, 이벤트 테이블 아래 */
+    flex-direction: column;
+    gap: var(--spacing-lg);        /* 섹션 간 간격 */
+}
+
+/* ==============================
+   제어 패널 (시뮬레이터 + 통계)
+   ============================== */
+/* 시뮬레이터 카드와 통계 카드를 가로로 배치한다 */
+.control-panel {
+    display: grid;
+    /* 2열 그리드 — 시뮬레이터 1fr, 통계 2fr (통계가 더 넓다) */
+    grid-template-columns: 1fr 2fr;
+    gap: var(--spacing-lg); /* 카드 간 간격 */
+}
+
+/* ==============================
+   카드 공통 스타일
+   ============================== */
+/* 각 섹션을 감싸는 카드 — 흰색 배경에 둥근 모서리와 그림자 */
+.card {
+    background-color: var(--color-card);
+    border-radius: 8px;           /* 둥근 모서리 */
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-card); /* 미세한 부유감 */
+}
+
+/* 카드 제목 */
+.card__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text);
+}
+
+/* 카드 헤더 — 제목과 버튼을 가로로 배치한다 */
+.card__header {
+    display: flex;
+    justify-content: space-between; /* 양쪽 끝으로 정렬 */
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.card__header .card__title {
+    margin-bottom: 0; /* 헤더 안에서는 하단 마진 제거 */
+}
+
+/* ==============================
+   시뮬레이터 카드
+   ============================== */
+/* 시뮬레이터 상태 텍스트 */
+.simulator__status {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+/* 시뮬레이터 제어 버튼 영역 */
+.simulator__controls {
+    display: flex;
+    gap: var(--spacing-sm); /* 버튼 간 간격 */
+}
+
+/* ==============================
+   버튼 스타일
+   ============================== */
+/* 공통 버튼 스타일 */
+.btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;       /* 마우스 포인터 — 클릭 가능 표시 */
+    transition: opacity 0.2s; /* 호버 시 부드러운 전환 효과 */
+}
+
+/* 호버 시 약간 투명하게 — 클릭 가능하다는 시각적 피드백 */
+.btn:hover {
+    opacity: 0.85;
+}
+
+/* 비활성화 상태 — 클릭할 수 없는 버튼 */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed; /* 금지 커서 */
+}
+
+/* 시작 버튼 — 초록 */
+.btn--start {
+    background-color: var(--color-reservation-created);
+    color: white;
+}
+
+/* 중지 버튼 — 빨강 */
+.btn--stop {
+    background-color: var(--color-reservation-cancelled);
+    color: white;
+}
+
+/* 초기화 버튼 — 회색 테두리 */
+.btn--clear {
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    padding: 4px 12px;
+    font-size: 0.8rem;
+}
+
+/* ==============================
+   이벤트 통계 그리드
+   ============================== */
+/* 통계 카드 내부 — 4개의 카운터를 가로로 배치한다 */
+.stats__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4열 균등 배분 */
+    gap: var(--spacing-md);
+}
+
+/* 개별 통계 항목 — 세로 중앙 정렬 */
+.stat {
+    text-align: center;
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    /* 각 이벤트 타입 색상의 연한 배경을 적용한다 */
+    background-color: var(--color-bg);
+}
+
+/* 통계 카운터 숫자 */
+.stat__count {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* 통계 라벨 텍스트 */
+.stat__label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+}
+
+/* 이벤트 타입별 통계 카운터 색상 */
+.stat--reservation-created .stat__count { color: var(--color-reservation-created); }
+.stat--inventory-updated .stat__count { color: var(--color-inventory-updated); }
+.stat--channel-synced .stat__count { color: var(--color-channel-synced); }
+.stat--reservation-cancelled .stat__count { color: var(--color-reservation-cancelled); }
+
+/* ==============================
+   이벤트 테이블
+   ============================== */
+/* 테이블 래퍼 — 가로 스크롤 지원 (좁은 화면에서) */
+.events__table-wrapper {
+    overflow-x: auto;        /* 가로 스크롤 활성화 */
+    max-height: 500px;       /* 최대 높이 제한 — 스크롤 가능 */
+    overflow-y: auto;        /* 세로 스크롤 활성화 */
+}
+
+/* 이벤트 테이블 — 전체 너비 사용 */
+.events__table {
+    width: 100%;
+    border-collapse: collapse; /* 셀 테두리 합치기 */
+    font-size: 0.875rem;
+}
+
+/* 테이블 헤더 — 고정 위치(sticky)로 스크롤해도 헤더가 보인다 */
+.events__table thead th {
+    position: sticky;            /* 스크롤 시 상단에 고정 */
+    top: 0;
+    background-color: var(--color-card); /* 헤더 배경 — 카드와 동일 */
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;   /* 대문자로 표시 */
+    letter-spacing: 0.5px;       /* 자간 — 가독성 향상 */
+    border-bottom: 2px solid var(--color-border);
+}
+
+/* 테이블 셀 */
+.events__table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap; /* 줄바꿈 방지 — 한 줄에 표시 */
+}
+
+/* 이벤트 행 호버 효과 — 어떤 행에 커서가 있는지 시각적으로 표시 */
+.events__table tbody tr:hover {
+    background-color: var(--color-bg);
+}
+
+/* 새로 추가된 이벤트 행의 등장 애니메이션 */
+/* JavaScript에서 행을 추가할 때 이 클래스를 부여한다 */
+.event-row--new {
+    animation: fadeIn 0.5s ease-out; /* 0.5초 페이드인 */
+}
+
+/* 페이드인 애니메이션 정의 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        background-color: #fef3c7; /* 연한 노란색에서 시작 — "새 이벤트" 강조 */
+    }
+    to {
+        opacity: 1;
+        background-color: transparent;
+    }
+}
+
+/* ==============================
+   이벤트 타입 뱃지
+   ============================== */
+/* 이벤트 타입을 작은 라벨로 표시한다 — 타입별 색상이 적용된다 */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+
+/* 각 이벤트 타입에 대응하는 뱃지 배경색 */
+.badge--reservation-created { background-color: var(--color-reservation-created); }
+.badge--inventory-updated { background-color: var(--color-inventory-updated); }
+.badge--channel-synced { background-color: var(--color-channel-synced); }
+.badge--reservation-cancelled { background-color: var(--color-reservation-cancelled); }
+
+/* ==============================
+   이벤트 상세 정보 (페이로드)
+   ============================== */
+/* eventPayload의 JSON 문자열에서 추출한 주요 정보를 표시한다 */
+.event-detail {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    max-width: 300px;
+    overflow: hidden;           /* 넘치는 텍스트 숨김 */
+    text-overflow: ellipsis;    /* 말줄임표(...) 표시 */
+    white-space: nowrap;
+}
+
+/* ==============================
+   빈 상태 메시지
+   ============================== -->
+   ============================== */
+/* 이벤트가 없을 때 표시되는 안내 메시지 */
+.events__empty {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+}
+
+/* ==============================
+   반응형 레이아웃
+   ============================== */
+/* 768px 이하에서 2열 그리드를 1열로 변경한다 */
+@media (max-width: 768px) {
+    .control-panel {
+        grid-template-columns: 1fr; /* 1열로 변경 — 세로 쌓기 */
+    }
+
+    .stats__grid {
+        grid-template-columns: repeat(2, 1fr); /* 4열 → 2열 */
+    }
+
+    .header {
+        flex-direction: column; /* 헤더 세로 배치 */
+        gap: var(--spacing-sm);
+    }
+}

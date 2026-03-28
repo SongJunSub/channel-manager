@@ -118,6 +118,14 @@ channel-manager/
 - SSE 구현: ServerSentEvent<EventResponse>, heartbeat(30초), Flux.merge
 - 통합 테스트 (Kotlin 6개 + Java 6개, StepVerifier + WebTestClient)
 
+### Phase 6 - 실시간 대시보드 ✅
+- 개념 MD 작성 (phase6-realtime-dashboard.md)
+- 대시보드 HTML/CSS/JS (channel-manager-common/src/main/resources/static/)
+- EventSource API로 SSE 실시간 이벤트 수신
+- 이벤트 타입별 색상 뱃지, 통계 카운터, 시뮬레이터 제어
+- 최근 이벤트 REST API 로드 (GET /api/events)
+- Kotlin(8080) / Java(8081) 양쪽에서 동일하게 서빙
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
