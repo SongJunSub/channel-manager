@@ -126,6 +126,15 @@ channel-manager/
 - 최근 이벤트 REST API 로드 (GET /api/events)
 - Kotlin(8080) / Java(8081) 양쪽에서 동일하게 서빙
 
+### Phase 7 - 예약 취소 & 재고 복구 ✅
+- 개념 MD 작성 (phase7-compensation.md)
+- ReservationService.cancelReservation() — 보상 트랜잭션 (Kotlin + Java)
+- increaseInventory() — 재고 복구 (FOR UPDATE 비관적 잠금)
+- ReservationController: DELETE /api/reservations/{id}
+- 상태 전이: CONFIRMED → CANCELLED (이미 취소된 예약 재취소 400)
+- RESERVATION_CANCELLED 이벤트 발행 → SSE → 대시보드 실시간 반영
+- 통합 테스트 추가 (Kotlin 15개 + Java 15개, 취소 4개 추가)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10

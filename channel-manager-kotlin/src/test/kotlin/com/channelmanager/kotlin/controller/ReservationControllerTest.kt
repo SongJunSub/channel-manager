@@ -358,4 +358,93 @@ class ReservationControllerTest {
             .expectBody()
             .jsonPath("$.running").isEqualTo(false) // 중지 확인
     }
+
+    // ===== 예약 취소 테스트 (Phase 7) =====
+
+    @Test // 예약 취소 성공 테스트
+    @Order(12)
+    fun `예약 취소 - CONFIRMED 예약을 취소하면 CANCELLED 상태를 반환한다`() {
+        // 먼저 취소할 예약을 생성한다
+        val request = ReservationCreateRequest(
+            channelCode = "BOOKING",
+            roomTypeId = TEST_ROOM_TYPE_ID,
+            checkInDate = TEST_CHECK_IN,
+            checkOutDate = TEST_CHECK_OUT,
+            guestName = "취소 테스트 투숙객",
+            roomQuantity = 1
+        )
+
+        // 예약 생성
+        val createResult = webTestClient.post()
+            .uri("/api/reservations")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isCreated
+            .expectBody(ReservationResponse::class.java)
+            .returnResult()
+            .responseBody!!
+        createdReservationIds.add(createResult.id)
+
+        // 예약 취소 — DELETE /api/reservations/{id}
+        webTestClient.delete()
+            .uri("/api/reservations/${createResult.id}")
+            .exchange()
+            .expectStatus().isOk // 200 OK 확인
+            .expectBody(ReservationResponse::class.java)
+            .consumeWith { result ->
+                val response = result.responseBody!!
+                assertThat(response.id).isEqualTo(createResult.id) // 같은 예약 ID
+                assertThat(response.status).isEqualTo(ReservationStatus.CANCELLED) // 취소 상태
+                assertThat(response.guestName).isEqualTo("취소 테스트 투숙객") // 투숙객 이름 유지
+            }
+    }
+
+    @Test // 예약 취소 후 재고 복구 확인 테스트
+    @Order(13)
+    fun `예약 취소 후 - 재고가 복구되었는지 확인한다`() {
+        // Order(1)에서 1실 예약, Order(12)에서 1실 예약 후 취소했으므로
+        // 재고는 Order(1)의 차감만 남아 9여야 한다
+        webTestClient.get()
+            .uri { uriBuilder ->
+                uriBuilder
+                    .path("/api/inventories")
+                    .queryParam("roomTypeId", TEST_ROOM_TYPE_ID)
+                    .queryParam("startDate", TEST_CHECK_IN.toString())
+                    .queryParam("endDate", TEST_CHECK_IN.toString())
+                    .build()
+            }
+            .exchange()
+            .expectStatus().isOk
+            .expectBodyList(com.channelmanager.kotlin.dto.InventoryResponse::class.java)
+            .hasSize(1)
+            .consumeWith<WebTestClient.ListBodySpec<com.channelmanager.kotlin.dto.InventoryResponse>> {
+                result ->
+                val inventory = result.responseBody!!.first()
+                // Order(1)에서 1실 차감(10→9), Order(12)에서 1실 차감 후 취소(9→8→9)
+                assertThat(inventory.availableQuantity).isEqualTo(9) // 취소 후 복구 확인
+            }
+    }
+
+    @Test // 이미 취소된 예약 재취소 시 400 에러
+    @Order(14)
+    fun `예약 취소 - 이미 취소된 예약이면 400을 반환한다`() {
+        // Order(12)에서 취소한 예약을 다시 취소 시도한다
+        // createdReservationIds의 마지막 항목이 Order(12)에서 생성된 예약
+        val cancelledId = createdReservationIds.last()
+
+        webTestClient.delete()
+            .uri("/api/reservations/$cancelledId")
+            .exchange()
+            .expectStatus().isBadRequest // 400 Bad Request 확인
+    }
+
+    @Test // 존재하지 않는 예약 취소 시 404 에러
+    @Order(15)
+    fun `예약 취소 - 존재하지 않는 예약이면 404를 반환한다`() {
+        webTestClient.delete()
+            .uri("/api/reservations/99999") // 존재하지 않는 예약 ID
+            .exchange()
+            .expectStatus().isNotFound // 404 Not Found 확인
+    }
 }
