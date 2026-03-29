@@ -135,6 +135,13 @@ channel-manager/
 - RESERVATION_CANCELLED 이벤트 발행 → SSE → 대시보드 실시간 반영
 - 통합 테스트 추가 (Kotlin 15개 + Java 15개, 취소 4개 추가)
 
+### Phase 8 - 통계 & 리포트 ✅
+- 개념 MD 작성 (phase8-statistics.md)
+- StatisticsService: groupBy+count, flatMap+collectList+fold, Mono.zip 병렬 집계
+- StatisticsController: 4개 통계 엔드포인트 (channels, events, rooms, summary)
+- DTOs: ChannelStatistics, EventStatistics, RoomTypeStatistics, SummaryStatistics
+- 통합 테스트 (Kotlin 6개 + Java 6개)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
