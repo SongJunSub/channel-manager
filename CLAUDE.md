@@ -180,6 +180,12 @@ channel-manager/
 - 22개 전체 테스트 클래스에 @Import(TestcontainersConfig) 적용
 - Docker만 있으면 로컬 PostgreSQL 없이 테스트 가능
 
+### Phase 14 - 동시성 테스트 ✅
+- 개념 MD 작성 (phase14-concurrency-test.md)
+- 동시 10건 예약: Flux.merge 병렬 실행 → FOR UPDATE 잠금으로 재고 정합성 보장
+- 재고 부족 시 초과 예약 방지: 재고 0일 때 모든 추가 예약 400 실패
+- 통합 테스트 (Kotlin 2개 + Java 2개)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
