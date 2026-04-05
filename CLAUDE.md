@@ -173,6 +173,13 @@ channel-manager/
 - RequestLoggingFilter (WebFilter): MDC requestId 설정, 요청/응답 로깅, 처리 시간 측정
 - MDC 필드: requestId, method, path
 
+### Phase 13 - Testcontainers (테스트 DB 자동화) ✅
+- 개념 MD 작성 (phase13-testcontainers.md)
+- spring-boot-testcontainers + testcontainers:postgresql + testcontainers:r2dbc 의존성
+- TestcontainersConfig: @ServiceConnection PostgreSQLContainer 자동 기동
+- 22개 전체 테스트 클래스에 @Import(TestcontainersConfig) 적용
+- Docker만 있으면 로컬 PostgreSQL 없이 테스트 가능
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10

@@ -4,8 +4,11 @@ import com.channelmanager.kotlin.domain.ReservationStatus // 예약 상태 enum
 import org.junit.jupiter.api.Test // JUnit 5 테스트 어노테이션
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입 어노테이션
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.kotlin.config.TestcontainersConfig
+import org.springframework.context.annotation.Import
 import reactor.test.StepVerifier // Reactor 스트림 검증 도구
 
+@Import(TestcontainersConfig::class)
 @SpringBootTest
 class ReservationRepositoryTest {
 

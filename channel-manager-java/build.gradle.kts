@@ -38,6 +38,9 @@ dependencies {
     // === 테스트 ===
     testImplementation("org.springframework.boot:spring-boot-starter-test")  // 테스트 스타터 (JUnit 5 포함)
     testImplementation("io.projectreactor:reactor-test")                     // Reactor 테스트 도구 (StepVerifier)
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")  // Phase 13: Testcontainers Spring Boot 통합
+    testImplementation("org.testcontainers:postgresql:1.21.0")                  // Phase 13: PostgreSQL Testcontainers 모듈
+    testImplementation("org.testcontainers:r2dbc:1.21.0")                      // Phase 13: R2DBC Testcontainers 모듈 (@ServiceConnection R2DBC 지원)
 }
 
 // 테스트 실행 시 JUnit Platform 사용

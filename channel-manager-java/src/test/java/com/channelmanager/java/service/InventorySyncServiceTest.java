@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test; // JUnit 5 테스트 어노테이션
 import org.junit.jupiter.api.TestInstance; // 테스트 인스턴스 생명주기 설정
 import org.springframework.beans.factory.annotation.Autowired; // 의존성 주입
 import org.springframework.boot.test.context.SpringBootTest; // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.java.config.TestcontainersConfig;
+import org.springframework.context.annotation.Import;
 import reactor.core.publisher.Flux; // 0~N개 비동기 스트림
 
 import java.time.LocalDate; // 날짜 타입
@@ -30,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 정적 임�
 //   기본값은 PER_METHOD로 각 테스트마다 새 인스턴스를 생성하지만,
 //   PER_CLASS는 하나의 인스턴스를 공유하여 @Autowired 필드를 @BeforeAll에서 사용할 수 있다
 // Kotlin에서도 @TestInstance(PER_CLASS)를 동일하게 사용한다
+@Import(TestcontainersConfig.class)
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InventorySyncServiceTest {

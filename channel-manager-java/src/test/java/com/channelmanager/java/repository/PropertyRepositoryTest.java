@@ -3,12 +3,15 @@ package com.channelmanager.java.repository; // 테스트 패키지
 import org.junit.jupiter.api.Test; // JUnit 5 테스트 어노테이션
 import org.springframework.beans.factory.annotation.Autowired; // 의존성 주입 어노테이션
 import org.springframework.boot.test.context.SpringBootTest; // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.java.config.TestcontainersConfig;
+import org.springframework.context.annotation.Import;
 import reactor.test.StepVerifier; // Reactor 스트림을 단계별로 검증하는 도구
 
 import com.channelmanager.java.domain.Property; // 숙소 엔티티
 
 // @SpringBootTest는 실제 DB(Docker PostgreSQL)에 연결하여 통합 테스트를 수행한다
 // Flyway가 V7에서 삽입한 샘플 데이터를 기반으로 검증한다
+@Import(TestcontainersConfig.class)
 @SpringBootTest
 class PropertyRepositoryTest {
 

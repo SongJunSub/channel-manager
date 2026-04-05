@@ -15,6 +15,8 @@ import org.junit.jupiter.api.TestInstance // 테스트 인스턴스 생명주기
 import org.junit.jupiter.api.TestMethodOrder // 테스트 메서드 정렬 전략
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.kotlin.config.TestcontainersConfig
+import org.springframework.context.annotation.Import
 import org.springframework.boot.test.web.server.LocalServerPort // 랜덤 포트 주입
 import org.springframework.http.MediaType // HTTP 미디어 타입
 import org.springframework.test.web.reactive.server.WebTestClient // WebFlux 테스트용 HTTP 클라이언트
@@ -29,6 +31,7 @@ import java.time.Duration // 시간 간격
 //     컨트롤러 메서드를 직접 호출하는 방식이 더 안정적이다
 // REST API 테스트: WebTestClient로 /api/events 엔드포인트를 HTTP 레벨에서 검증한다
 // @TestInstance(PER_CLASS): @AfterAll에서 non-static 메서드 사용 가능
+@Import(TestcontainersConfig::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

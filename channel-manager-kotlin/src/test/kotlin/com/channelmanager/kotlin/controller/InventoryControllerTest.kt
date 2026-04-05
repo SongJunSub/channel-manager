@@ -16,6 +16,8 @@ import org.junit.jupiter.api.TestInstance // 테스트 인스턴스 생명주기
 import org.junit.jupiter.api.TestMethodOrder // 테스트 메서드 정렬 전략 지정
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입 어노테이션
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.kotlin.config.TestcontainersConfig
+import org.springframework.context.annotation.Import
 import org.springframework.boot.test.web.server.LocalServerPort // 랜덤 포트 주입 어노테이션
 import org.springframework.http.MediaType // HTTP 미디어 타입 (Content-Type)
 import org.springframework.test.web.reactive.server.WebTestClient // WebFlux 테스트용 HTTP 클라이언트
@@ -26,6 +28,7 @@ import java.time.LocalDate // 날짜 타입
 // WebTestClient는 이 서버에 HTTP 요청을 보내고 응답을 검증한다
 // @TestMethodOrder(OrderAnnotation): @Order 어노테이션으로 테스트 실행 순서를 제어한다
 // @TestInstance(PER_CLASS): 테스트 클래스 인스턴스를 하나만 생성하여 @AfterAll에서 non-static 메서드 사용 가능
+@Import(TestcontainersConfig::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

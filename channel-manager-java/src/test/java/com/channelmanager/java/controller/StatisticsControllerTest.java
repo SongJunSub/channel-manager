@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test; // JUnit 5 테스트 어노테이션
 import org.junit.jupiter.api.TestInstance; // 테스트 인스턴스 생명주기 설정
 import org.junit.jupiter.api.TestMethodOrder; // 테스트 메서드 정렬 전략
 import org.springframework.boot.test.context.SpringBootTest; // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.java.config.TestcontainersConfig;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.server.LocalServerPort; // 랜덤 포트 주입
 import org.springframework.test.web.reactive.server.WebTestClient; // WebFlux 테스트용 HTTP 클라이언트
 import java.math.BigDecimal; // 금액 타입
@@ -23,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 정적 impo
 // 별도 테스트 데이터 생성 없이 V7 샘플 데이터만으로 테스트한다
 // Kotlin과 동일한 테스트 구조이지만, Java에서는 명시적 타입 선언과 메서드 호출을 사용한다
 // @TestInstance(PER_CLASS): 테스트 간 상태 공유 가능
+@Import(TestcontainersConfig.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

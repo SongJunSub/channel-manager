@@ -13,6 +13,8 @@ import org.junit.jupiter.api.TestInstance // 테스트 인스턴스 생명주기
 import org.junit.jupiter.api.TestMethodOrder // 테스트 메서드 정렬 전략
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.kotlin.config.TestcontainersConfig
+import org.springframework.context.annotation.Import
 import org.springframework.boot.test.web.server.LocalServerPort // 랜덤 포트 주입
 import org.springframework.test.web.reactive.server.WebTestClient // WebFlux 테스트용 HTTP 클라이언트
 import java.math.BigDecimal // 금액 타입
@@ -22,6 +24,7 @@ import java.time.Duration // 시간 간격
 // V7 샘플 데이터를 기반으로 통계 API를 검증한다
 // 별도 테스트 데이터 생성 없이 V7 샘플 데이터만으로 테스트한다
 // @TestInstance(PER_CLASS): 테스트 간 상태 공유 가능
+@Import(TestcontainersConfig::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

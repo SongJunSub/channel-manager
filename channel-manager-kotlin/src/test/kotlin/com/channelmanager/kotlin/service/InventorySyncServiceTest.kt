@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test // JUnit 5 테스트 어노테이션
 import org.junit.jupiter.api.TestInstance // 테스트 인스턴스 생명주기 설정
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
+import com.channelmanager.kotlin.config.TestcontainersConfig
+import org.springframework.context.annotation.Import
 import reactor.core.publisher.Flux // 0~N개 비동기 스트림
 import java.time.LocalDate // 날짜 타입
 
@@ -22,6 +24,7 @@ import java.time.LocalDate // 날짜 타입
 // 2. 동시에 같은 재고를 차감해도 정합성이 유지되는지 (비관적 잠금)
 // @SpringBootTest: 전체 애플리케이션 컨텍스트를 로드하여 실제 DB와 연동 테스트
 // @TestInstance(PER_CLASS): @BeforeAll/@AfterAll에서 non-static 메서드 사용 가능
+@Import(TestcontainersConfig::class)
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InventorySyncServiceTest {
