@@ -18,11 +18,11 @@ import org.springframework.transaction.annotation.Transactional // 트랜잭션 
 import reactor.core.publisher.Flux // 0~N개 비동기 스트림
 import reactor.core.publisher.Mono // 0~1개 비동기 스트림
 import java.math.BigDecimal // 금액 처리용 정밀 숫자 타입
+import java.time.LocalDate // 날짜 타입 (필터링용)
 
-// 예약 서비스 - 예약 생성 + 재고 차감 + 이벤트 기록을 담당한다
-// 여러 테이블(Reservation, Inventory, ChannelEvent)에 걸친 트랜잭션이 필요하다
+// 예약 서비스 - 예약 CRUD + 재고 관리 + 이벤트 기록을 담당한다
+// Phase 3: 예약 생성 (POST), Phase 7: 예약 취소 (DELETE), Phase 9: 예약 조회 (GET)
 // @Service로 Spring 빈으로 등록하고, 생성자 주입으로 의존성을 받는다
-// Phase 4: EventPublisher를 주입받아 이벤트 저장 후 Sinks에도 발행한다
 @Service
 class ReservationService(
     private val reservationRepository: ReservationRepository,     // 예약 DB 접근
@@ -32,6 +32,75 @@ class ReservationService(
     private val channelEventRepository: ChannelEventRepository,   // 이벤트 DB 접근
     private val eventPublisher: EventPublisher                    // Phase 4: 이벤트 발행 서비스
 ) {
+
+    // ===== Phase 9: 예약 조회 =====
+
+    // 예약 단건 조회
+    // ID로 예약을 조회하고, 채널 코드를 풍부화(enrich)하여 DTO로 반환한다
+    // R2DBC는 JOIN을 지원하지 않으므로, 채널을 별도로 조회하여 channelCode를 채운다
+    // switchIfEmpty: 예약이 없으면 404 에러
+    // flatMap: 예약 조회 후 채널을 비동기로 추가 조회하는 체인
+    fun getReservation(reservationId: Long): Mono<ReservationResponse> =
+        reservationRepository.findById(reservationId) // 예약 조회
+            .switchIfEmpty(Mono.error( // 없으면 404
+                NotFoundException("예약을 찾을 수 없습니다. id=$reservationId")
+            ))
+            .flatMap { reservation -> // 예약 조회 완료 → 채널 코드 풍부화
+                channelRepository.findById(reservation.channelId) // 채널 조회
+                    .map { channel -> // 채널 코드로 DTO 변환
+                        ReservationResponse.from(reservation, channel.channelCode)
+                    }
+            }
+
+    // 예약 목록 조회 — 선택적 필터링 + 페이징
+    // 모든 필터 파라미터는 nullable — null이면 해당 조건을 무시한다
+    // 흐름:
+    //   1. 채널 정보를 미리 Map으로 로드 (N+1 방지)
+    //   2. 전체 예약을 조회한다
+    //   3. Flux.filter()로 애플리케이션 레벨 필터링
+    //   4. skip()/take()로 페이징 처리
+    //   5. DTO 변환 (채널 Map에서 channelCode 참조)
+    // collectMap: 채널 정보를 Map<channelId, channelCode>로 미리 수집
+    //   — 예약마다 채널을 개별 조회하는 N+1 문제를 방지한다
+    // flatMapMany: Mono<Map> → Flux<ReservationResponse> 변환
+    fun listReservations(
+        channelId: Long?,               // 채널 ID 필터 (null이면 전체)
+        status: ReservationStatus?,      // 예약 상태 필터 (null이면 전체)
+        startDate: LocalDate?,           // 체크인 시작일 필터 (이후)
+        endDate: LocalDate?,             // 체크인 종료일 필터 (이전)
+        page: Int,                       // 페이지 번호 (0부터)
+        size: Int                        // 페이지 크기
+    ): Flux<ReservationResponse> =
+        channelRepository.findAll() // 1단계: 모든 채널을 미리 로드
+            .collectMap({ it.id!! }, { it.channelCode }) // Map<Long, String> 수집
+            .flatMapMany { channelMap -> // Mono<Map> → Flux<Response> 변환
+                reservationRepository.findAll() // 2단계: 전체 예약 조회
+                    // 3단계: Flux.filter()로 선택적 필터링
+                    // channelId가 null이면 조건을 건너뛴다 (전체 통과)
+                    .filter { channelId == null || it.channelId == channelId }
+                    // status가 null이면 조건을 건너뛴다
+                    .filter { status == null || it.status == status }
+                    // startDate가 null이면 조건을 건너뛴다
+                    // isBefore의 반대인 !isBefore: startDate 이후의 체크인만 통과
+                    .filter { startDate == null || !it.checkInDate.isBefore(startDate) }
+                    // endDate가 null이면 조건을 건너뛴다
+                    // isAfter의 반대인 !isAfter: endDate 이전의 체크인만 통과
+                    .filter { endDate == null || !it.checkInDate.isAfter(endDate) }
+                    // 4단계: 페이징 — skip()으로 앞부분 건너뛰고, take()로 제한
+                    // page=0, size=20 → skip(0), take(20) → 첫 20개
+                    // page=1, size=20 → skip(20), take(20) → 21~40번째
+                    .skip((page * size).toLong()) // offset
+                    .take(size.toLong())           // limit
+                    // 5단계: DTO 변환 — 미리 로드한 channelMap에서 코드 참조
+                    .map { reservation ->
+                        ReservationResponse.from(
+                            reservation,
+                            channelMap[reservation.channelId] ?: "UNKNOWN"
+                        )
+                    }
+            }
+
+    // ===== Phase 3: 예약 생성 =====
 
     // 예약 생성 — 핵심 비즈니스 로직
     // 7단계의 Reactive 체인으로 구성된다:

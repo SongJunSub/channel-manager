@@ -447,4 +447,85 @@ class ReservationControllerTest {
             .exchange()
             .expectStatus().isNotFound // 404 Not Found 확인
     }
+
+    // ===== 예약 조회 테스트 (Phase 9) =====
+
+    @Test // 예약 단건 조회 테스트
+    @Order(16)
+    fun `예약 조회 - ID로 단건 예약을 조회한다`() {
+        // Order(1)에서 생성한 첫 번째 예약을 조회한다
+        val reservationId = createdReservationIds.first()
+
+        webTestClient.get()
+            .uri("/api/reservations/$reservationId")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ReservationResponse::class.java)
+            .consumeWith { result ->
+                val response = result.responseBody!!
+                assertThat(response.id).isEqualTo(reservationId)
+                assertThat(response.channelCode).isNotBlank
+                assertThat(response.guestName).isEqualTo("테스트 투숙객")
+            }
+    }
+
+    @Test // 존재하지 않는 예약 조회 시 404
+    @Order(17)
+    fun `예약 조회 - 존재하지 않는 예약이면 404를 반환한다`() {
+        webTestClient.get()
+            .uri("/api/reservations/99999")
+            .exchange()
+            .expectStatus().isNotFound
+    }
+
+    @Test // 예약 목록 전체 조회
+    @Order(18)
+    fun `예약 목록 - 필터 없이 전체 예약을 반환한다`() {
+        webTestClient.get()
+            .uri("/api/reservations")
+            .exchange()
+            .expectStatus().isOk
+            .expectBodyList(ReservationResponse::class.java)
+            .consumeWith<WebTestClient.ListBodySpec<ReservationResponse>> { result ->
+                val reservations = result.responseBody!!
+                // V7 샘플(3건) + 테스트에서 생성한 예약이 포함되어야 한다
+                assertThat(reservations).isNotEmpty
+                // 각 예약에 channelCode가 포함되어 있는지 확인
+                reservations.forEach { r ->
+                    assertThat(r.channelCode).isNotBlank
+                }
+            }
+    }
+
+    @Test // 상태 필터링 테스트
+    @Order(19)
+    fun `예약 목록 - status 필터로 확정 예약만 조회한다`() {
+        webTestClient.get()
+            .uri("/api/reservations?status=CONFIRMED")
+            .exchange()
+            .expectStatus().isOk
+            .expectBodyList(ReservationResponse::class.java)
+            .consumeWith<WebTestClient.ListBodySpec<ReservationResponse>> { result ->
+                val reservations = result.responseBody!!
+                // 모든 예약이 CONFIRMED 상태여야 한다
+                reservations.forEach { r ->
+                    assertThat(r.status).isEqualTo(ReservationStatus.CONFIRMED)
+                }
+            }
+    }
+
+    @Test // 페이징 테스트
+    @Order(20)
+    fun `예약 목록 - page와 size로 페이징한다`() {
+        webTestClient.get()
+            .uri("/api/reservations?page=0&size=2")
+            .exchange()
+            .expectStatus().isOk
+            .expectBodyList(ReservationResponse::class.java)
+            .consumeWith<WebTestClient.ListBodySpec<ReservationResponse>> { result ->
+                val reservations = result.responseBody!!
+                // size=2이므로 최대 2개만 반환
+                assertThat(reservations.size).isLessThanOrEqualTo(2)
+            }
+    }
 }

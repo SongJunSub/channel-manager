@@ -19,14 +19,11 @@ import org.springframework.transaction.annotation.Transactional; // 트랜잭션
 import reactor.core.publisher.Flux; // 0~N개 비동기 스트림
 import reactor.core.publisher.Mono; // 0~1개 비동기 스트림
 import java.math.BigDecimal; // 금액 처리용 정밀 숫자 타입
+import java.time.LocalDate; // 날짜 타입 (필터링용)
 
-// 예약 서비스 - 예약 생성 + 재고 차감 + 이벤트 기록을 담당한다
-// 여러 테이블(Reservation, Inventory, ChannelEvent)에 걸친 트랜잭션이 필요하다
-// @Service로 Spring 빈으로 등록한다
+// 예약 서비스 - 예약 CRUD + 재고 관리 + 이벤트 기록을 담당한다
+// Phase 3: 예약 생성 (POST), Phase 7: 예약 취소 (DELETE), Phase 9: 예약 조회 (GET)
 // @RequiredArgsConstructor: Lombok이 final 필드에 대한 생성자를 자동 생성한다
-// Kotlin에서는 primary constructor에 val로 선언하지만,
-// Java에서는 @RequiredArgsConstructor + private final 필드로 동일한 효과를 얻는다
-// Phase 4: EventPublisher를 주입받아 이벤트 저장 후 Sinks에도 발행한다
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -37,6 +34,60 @@ public class ReservationService {
     private final InventoryRepository inventoryRepository;         // 재고 DB 접근
     private final ChannelEventRepository channelEventRepository;   // 이벤트 DB 접근
     private final EventPublisher eventPublisher;                   // Phase 4: 이벤트 발행 서비스
+
+    // ===== Phase 9: 예약 조회 =====
+
+    // 예약 단건 조회
+    // ID로 예약을 조회하고, 채널 코드를 풍부화(enrich)하여 DTO로 반환한다
+    // R2DBC는 JOIN을 지원하지 않으므로, 채널을 별도로 조회하여 channelCode를 채운다
+    // Kotlin에서는 fun getReservation(reservationId: Long): Mono<ReservationResponse>이지만,
+    // Java에서는 public Mono<ReservationResponse> getReservation(long reservationId)이다
+    public Mono<ReservationResponse> getReservation(long reservationId) {
+        return reservationRepository.findById(reservationId) // 예약 조회
+            .switchIfEmpty(Mono.error(new NotFoundException( // 없으면 404
+                "예약을 찾을 수 없습니다. id=" + reservationId
+            )))
+            .flatMap(reservation -> // 예약 조회 완료 → 채널 코드 풍부화
+                channelRepository.findById(reservation.getChannelId()) // 채널 조회
+                    .map(channel -> // 채널 코드로 DTO 변환
+                        ReservationResponse.from(reservation, channel.getChannelCode())
+                    )
+            );
+    }
+
+    // 예약 목록 조회 — 선택적 필터링 + 페이징
+    // 모든 필터 파라미터는 nullable — null이면 해당 조건을 무시한다
+    // collectMap: 채널 정보를 Map<channelId, channelCode>로 미리 수집 (N+1 방지)
+    // flatMapMany: Mono<Map> → Flux<ReservationResponse> 변환
+    // Kotlin에서는 it 키워드와 toLong()을 사용하지만,
+    // Java에서는 명시적 람다 파라미터와 (long) 캐스팅을 사용한다
+    public Flux<ReservationResponse> listReservations(
+            Long channelId, ReservationStatus status,
+            LocalDate startDate, LocalDate endDate,
+            int page, int size) {
+        return channelRepository.findAll() // 1단계: 모든 채널을 미리 로드
+            .collectMap(channel -> channel.getId(), channel -> channel.getChannelCode())
+            .flatMapMany(channelMap -> // Mono<Map> → Flux<Response> 변환
+                reservationRepository.findAll() // 2단계: 전체 예약 조회
+                    // 3단계: Flux.filter()로 선택적 필터링
+                    .filter(r -> channelId == null || r.getChannelId().equals(channelId))
+                    .filter(r -> status == null || r.getStatus() == status)
+                    .filter(r -> startDate == null || !r.getCheckInDate().isBefore(startDate))
+                    .filter(r -> endDate == null || !r.getCheckInDate().isAfter(endDate))
+                    // 4단계: 페이징
+                    .skip((long) page * size) // offset
+                    .take(size)                // limit
+                    // 5단계: DTO 변환
+                    .map(reservation ->
+                        ReservationResponse.from(
+                            reservation,
+                            channelMap.getOrDefault(reservation.getChannelId(), "UNKNOWN")
+                        )
+                    )
+            );
+    }
+
+    // ===== Phase 3: 예약 생성 =====
 
     // 예약 생성 — 핵심 비즈니스 로직
     // 7단계의 Reactive 체인으로 구성된다:

@@ -142,6 +142,14 @@ channel-manager/
 - DTOs: ChannelStatistics, EventStatistics, RoomTypeStatistics, SummaryStatistics
 - 통합 테스트 (Kotlin 6개 + Java 6개)
 
+### Phase 9 - 예약 조회 API ✅
+- 개념 MD 작성 (phase9-reservation-query.md)
+- GET /api/reservations/{id} — 단건 조회 (채널 코드 풍부화)
+- GET /api/reservations — 목록 조회 (channelId, status, startDate, endDate 필터 + page/size 페이징)
+- N+1 방지: collectMap으로 채널 정보 미리 로드
+- Flux.filter() + skip() + take() 애플리케이션 레벨 필터링/페이징
+- 통합 테스트 추가 (Kotlin 20개 + Java 20개, 조회 5개 추가)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10

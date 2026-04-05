@@ -429,4 +429,82 @@ class ReservationControllerTest {
             .exchange()
             .expectStatus().isNotFound(); // 404 Not Found 확인
     }
+
+    // ===== 예약 조회 테스트 (Phase 9) =====
+
+    @Test // 예약 단건 조회 테스트
+    @Order(16)
+    void 예약_조회_ID로_단건_예약을_조회한다() {
+        // Order(1)에서 생성한 첫 번째 예약을 조회한다
+        var reservationId = createdReservationIds.getFirst();
+
+        webTestClient.get()
+            .uri("/api/reservations/" + reservationId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(ReservationResponse.class)
+            .consumeWith(result -> {
+                var response = result.getResponseBody();
+                assertThat(response).isNotNull();
+                assertThat(response.id()).isEqualTo(reservationId);
+                assertThat(response.channelCode()).isNotBlank();
+                assertThat(response.guestName()).isEqualTo("테스트 투숙객");
+            });
+    }
+
+    @Test // 존재하지 않는 예약 조회 시 404
+    @Order(17)
+    void 예약_조회_존재하지_않는_예약이면_404를_반환한다() {
+        webTestClient.get()
+            .uri("/api/reservations/99999")
+            .exchange()
+            .expectStatus().isNotFound();
+    }
+
+    @Test // 예약 목록 전체 조회
+    @Order(18)
+    void 예약_목록_필터_없이_전체_예약을_반환한다() {
+        webTestClient.get()
+            .uri("/api/reservations")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(ReservationResponse.class)
+            .consumeWith(result -> {
+                var reservations = result.getResponseBody();
+                assertThat(reservations).isNotEmpty();
+                reservations.forEach(r ->
+                    assertThat(r.channelCode()).isNotBlank()
+                );
+            });
+    }
+
+    @Test // 상태 필터링 테스트
+    @Order(19)
+    void 예약_목록_status_필터로_확정_예약만_조회한다() {
+        webTestClient.get()
+            .uri("/api/reservations?status=CONFIRMED")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(ReservationResponse.class)
+            .consumeWith(result -> {
+                var reservations = result.getResponseBody();
+                reservations.forEach(r ->
+                    assertThat(r.status()).isEqualTo(ReservationStatus.CONFIRMED)
+                );
+            });
+    }
+
+    @Test // 페이징 테스트
+    @Order(20)
+    void 예약_목록_page와_size로_페이징한다() {
+        webTestClient.get()
+            .uri("/api/reservations?page=0&size=2")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(ReservationResponse.class)
+            .consumeWith(result -> {
+                var reservations = result.getResponseBody();
+                assertThat(reservations.size()).isLessThanOrEqualTo(2);
+            });
+    }
 }
