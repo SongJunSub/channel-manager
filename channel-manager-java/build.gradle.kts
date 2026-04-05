@@ -24,8 +24,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")                       // Flyway PostgreSQL 지원
     runtimeOnly("org.postgresql:postgresql")                                        // Flyway가 사용할 JDBC 드라이버
 
-    // === OpenAPI (Swagger) 어노테이션 ===
+    // === OpenAPI (Swagger) ===
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")  // @Schema 등 API 문서화 어노테이션
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6")  // Phase 11: Swagger UI + OpenAPI 자동 생성
 
     // === Lombok (Java 보일러플레이트 코드 제거) ===
     compileOnly("org.projectlombok:lombok")           // 컴파일 시에만 필요 (getter, setter 등 자동 생성)

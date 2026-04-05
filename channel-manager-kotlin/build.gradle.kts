@@ -26,8 +26,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")                       // Flyway PostgreSQL 지원
     runtimeOnly("org.postgresql:postgresql")                                        // Flyway가 사용할 JDBC 드라이버
 
-    // === OpenAPI (Swagger) 어노테이션 ===
+    // === OpenAPI (Swagger) ===
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")  // @Schema 등 API 문서화 어노테이션
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6")  // Phase 11: Swagger UI + OpenAPI 자동 생성
 
     // === Kotlin 지원 ===
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")  // Jackson Kotlin 모듈 (JSON 직렬화)

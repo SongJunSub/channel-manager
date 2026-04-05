@@ -157,6 +157,15 @@ channel-manager/
 - ReservationService: totalPrice 계산에 channel.markupRate 곱셈 적용
 - 채널별 마크업: DIRECT(1.0), BOOKING(1.15), AGODA(1.10), TRIP(0.95)
 
+### Phase 11 - API 문서화 (SpringDoc Swagger) ✅
+- 개념 MD 작성 (phase11-api-documentation.md)
+- springdoc-openapi-starter-webflux-ui 의존성 추가
+- OpenApiConfig 빈: API 제목, 설명, 버전 설정
+- application.yml: springdoc 설정 (경로, 정렬)
+- 19개 엔드포인트 자동 문서화, 기존 @Schema 자동 반영
+- Swagger UI: /webjars/swagger-ui/index.html
+- OpenAPI JSON: /v3/api-docs
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
