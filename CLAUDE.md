@@ -150,6 +150,13 @@ channel-manager/
 - Flux.filter() + skip() + take() 애플리케이션 레벨 필터링/페이징
 - 통합 테스트 추가 (Kotlin 20개 + Java 20개, 조회 5개 추가)
 
+### Phase 10 - 채널별 가격 차등 ✅
+- 개념 MD 작성 (phase10-channel-pricing.md)
+- V8 마이그레이션: channels 테이블에 markup_rate 컬럼 추가
+- Channel 엔티티에 markupRate 필드 추가 (BigDecimal, 기본값 1.0)
+- ReservationService: totalPrice 계산에 channel.markupRate 곱셈 적용
+- 채널별 마크업: DIRECT(1.0), BOOKING(1.15), AGODA(1.10), TRIP(0.95)
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor; // 기본 생성자 자동 생성
 import org.springframework.data.annotation.CreatedDate; // 생성 시각 자동 기록 어노테이션
 import org.springframework.data.annotation.Id; // PK 필드 지정 어노테이션
 import org.springframework.data.relational.core.mapping.Table; // R2DBC 테이블 매핑 어노테이션
+import java.math.BigDecimal; // 마크업 비율 타입
 import java.time.LocalDateTime; // 날짜+시간 타입
 
 // 판매 채널 엔티티 - channels 테이블과 매핑
@@ -34,6 +35,10 @@ public class Channel {
     @Schema(description = "채널 활성 상태", example = "true", defaultValue = "true")
     @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
     private boolean isActive = true;
+
+    @Schema(description = "마크업 비율 (1.0=기본가, 1.15=15%인상)", example = "1.000")
+    @Builder.Default // @Builder 사용 시 기본값을 유지하기 위한 어노테이션
+    private BigDecimal markupRate = BigDecimal.ONE; // 기본값 1.0 — 가격 변동 없음
 
     @Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY)
     @CreatedDate // 엔티티 생성 시 현재 시각 자동 기록

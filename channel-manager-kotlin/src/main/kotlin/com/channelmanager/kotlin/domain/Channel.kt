@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema // API 문서화용 스키마 
 import org.springframework.data.annotation.CreatedDate // 생성 시각 자동 기록 어노테이션
 import org.springframework.data.annotation.Id // PK 필드 지정 어노테이션
 import org.springframework.data.relational.core.mapping.Table // R2DBC 테이블 매핑 어노테이션
+import java.math.BigDecimal // 마크업 비율 타입
 import java.time.LocalDateTime // 날짜+시간 타입
 
 // 판매 채널 엔티티 - channels 테이블과 매핑
@@ -24,6 +25,9 @@ data class Channel(
 
     @field:Schema(description = "채널 활성 상태", example = "true", defaultValue = "true")
     val isActive: Boolean = true,
+
+    @field:Schema(description = "마크업 비율 (1.0=기본가, 1.15=15%인상)", example = "1.000")
+    val markupRate: BigDecimal = BigDecimal.ONE, // 기본값 1.0 — 가격 변동 없음
 
     @field:Schema(description = "엔티티 생성 시각", accessMode = Schema.AccessMode.READ_ONLY)
     @CreatedDate // 엔티티 생성 시 현재 시각 자동 기록

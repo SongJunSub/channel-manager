@@ -128,7 +128,8 @@ public class ReservationService {
                                     .count(); // 숙박일수
                                 BigDecimal totalPrice = roomType.getBasePrice() // 1박 기본 가격
                                     .multiply(BigDecimal.valueOf(nights)) // × 숙박일수
-                                    .multiply(BigDecimal.valueOf(request.roomQuantity())); // × 객실수
+                                    .multiply(BigDecimal.valueOf(request.roomQuantity())) // × 객실수
+                                    .multiply(channel.getMarkupRate()); // Phase 10: × 채널 마크업 비율
 
                                 return reservationRepository.save( // 예약 저장
                                     Reservation.builder()

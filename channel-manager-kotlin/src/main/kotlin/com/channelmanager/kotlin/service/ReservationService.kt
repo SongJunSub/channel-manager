@@ -143,6 +143,7 @@ class ReservationService(
                                 val totalPrice = roomType.basePrice // 1박 기본 가격
                                     .multiply(BigDecimal.valueOf(nights)) // × 숙박일수
                                     .multiply(BigDecimal.valueOf(request.roomQuantity.toLong())) // × 객실수
+                                    .multiply(channel.markupRate) // Phase 10: × 채널 마크업 비율
 
                                 reservationRepository.save( // 예약 저장
                                     Reservation(
