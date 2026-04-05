@@ -28,6 +28,9 @@ dependencies {
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")  // @Schema 등 API 문서화 어노테이션
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6")  // Phase 11: Swagger UI + OpenAPI 자동 생성
 
+    // === 구조화 로깅 (Phase 12) ===
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
+
     // === Lombok (Java 보일러플레이트 코드 제거) ===
     compileOnly("org.projectlombok:lombok")           // 컴파일 시에만 필요 (getter, setter 등 자동 생성)
     annotationProcessor("org.projectlombok:lombok")   // Lombok 어노테이션 프로세서

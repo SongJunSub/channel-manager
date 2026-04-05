@@ -30,6 +30,9 @@ dependencies {
     implementation("io.swagger.core.v3:swagger-annotations:2.2.28")  // @Schema 등 API 문서화 어노테이션
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.8.6")  // Phase 11: Swagger UI + OpenAPI 자동 생성
 
+    // === 구조화 로깅 (Phase 12) ===
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
+
     // === Kotlin 지원 ===
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")  // Jackson Kotlin 모듈 (JSON 직렬화)
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")  // Reactor Kotlin 확장 함수

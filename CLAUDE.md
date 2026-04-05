@@ -166,6 +166,13 @@ channel-manager/
 - Swagger UI: /webjars/swagger-ui/index.html
 - OpenAPI JSON: /v3/api-docs
 
+### Phase 12 - 구조화 로깅 (JSON + MDC) ✅
+- 개념 MD 작성 (phase12-structured-logging.md)
+- logstash-logback-encoder 8.0 의존성 추가
+- logback-spring.xml: default(콘솔) / prod(JSON) 프로파일 분리
+- RequestLoggingFilter (WebFilter): MDC requestId 설정, 요청/응답 로깅, 처리 시간 측정
+- MDC 필드: requestId, method, path
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
