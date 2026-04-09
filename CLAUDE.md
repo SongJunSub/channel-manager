@@ -197,6 +197,16 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 16 - GitHub Actions CI/CD ✅
+- 개념 MD 작성 (phase16-cicd.md)
+- CI 워크플로우 (.github/workflows/ci.yml): push/PR 시 Kotlin/Java 모듈 병렬 빌드 + 테스트
+- CD 워크플로우 (.github/workflows/cd.yml): main push 시 Docker 이미지 빌드 → GHCR 푸시
+- 매트릭스 전략: Kotlin/Java 모듈 병렬 실행
+- Gradle 캐싱: gradle/actions/setup-gradle@v4
+- Docker BuildKit 캐싱: cache-from/cache-to type=gha
+- 테스트 리포트 아티팩트 업로드 (실패 시에도 업로드)
+- GHCR 태그 전략: latest + sha-{commit_hash}
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
@@ -212,6 +222,7 @@ channel-manager/
 - Phase 완료 시마다 커밋 & 푸시
 
 ## 커밋 전 필수 검증
-- 커밋 & 푸시 전에 반드시 `/simplify`를 3개의 병렬 리뷰 에이전트로 실행한다.
-- 3명의 개발자가 코드를 리뷰하는 것처럼 Code Reuse / Code Quality / Efficiency 관점에서 검증한다.
-- 리뷰에서 발견된 이슈를 수정한 후에만 커밋 & 푸시한다.
+- 커밋 & 푸시 전에 반드시 3개의 병렬 리뷰 에이전트를 실행한다.
+- 3명의 독립된 개발자가 PR을 리뷰하는 것처럼, 각 에이전트가 Code Reuse / Code Quality / Efficiency **전체 관점**을 모두 검토한다.
+- 즉, 관점별 1명이 아니라 3명이 각각 전체 리뷰를 수행하여 서로 다른 시각에서 이슈를 발견한다.
+- 3명의 리뷰에서 발견된 이슈를 모두 수정한 후에만 커밋 & 푸시한다.

@@ -1,0 +1,87 @@
+# =============================================================================
+# CD 워크플로우 — Docker 이미지 빌드 및 GHCR 푸시
+# =============================================================================
+# 트리거: CI 워크플로우 성공 시 (workflow_run)
+# CI가 통과한 경우에만 Docker 이미지를 빌드하여 GHCR에 푸시
+# Kotlin/Java 모듈을 각각 빌드하여 GitHub Container Registry에 푸시
+# =============================================================================
+
+name: CD  # GitHub Actions 탭에 표시되는 워크플로우 이름
+
+# ---------------------------------------------------------------------------
+# 트리거 이벤트 정의 — CI 워크플로우 완료 시
+# ---------------------------------------------------------------------------
+on:
+  workflow_run:
+    workflows: [CI]             # CI 워크플로우 이름과 정확히 일치해야 함
+    types: [completed]          # CI 워크플로우가 완료(성공/실패)되면 트리거
+    branches: [main]            # main 브랜치에서 실행된 CI만 대상
+
+# ---------------------------------------------------------------------------
+# GHCR 푸시에 필요한 권한
+# ---------------------------------------------------------------------------
+permissions:
+  contents: read              # 소스 코드 읽기
+  packages: write             # GHCR 패키지 쓰기 (이미지 푸시)
+
+# ---------------------------------------------------------------------------
+# Docker 이미지 빌드 & 푸시 Job
+# ---------------------------------------------------------------------------
+jobs:
+  build-and-push:
+    name: Docker Build & Push (${{ matrix.module }})  # 매트릭스 변수로 Job 이름 동적 생성
+    runs-on: ubuntu-latest                             # GitHub 호스티드 러너
+
+    # CI 워크플로우가 성공한 경우에만 실행 (실패/취소 시 스킵)
+    if: github.event.workflow_run.conclusion == 'success'
+
+    # 매트릭스 전략 — Kotlin, Java 모듈을 병렬로 빌드
+    strategy:
+      matrix:
+        include:
+          - module: channel-manager-kotlin              # Kotlin 모듈
+            dockerfile: channel-manager-kotlin/Dockerfile
+            image: channel-manager-kotlin
+          - module: channel-manager-java                # Java 모듈
+            dockerfile: channel-manager-java/Dockerfile
+            image: channel-manager-java
+      fail-fast: false  # 하나가 실패해도 나머지 계속 실행 (두 모듈 결과를 모두 확인)
+
+    steps:
+      # 1. 소스 코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Docker Buildx 설정 (멀티플랫폼 빌드, 캐싱 지원)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3  # BuildKit 기반 빌더 설정
+
+      # 3. GHCR 로그인
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io                              # GitHub Container Registry
+          username: ${{ github.actor }}                   # 워크플로우 실행자 (커밋한 사용자)
+          password: ${{ secrets.GITHUB_TOKEN }}           # GitHub가 자동 제공하는 토큰
+
+      # 4. Docker 이미지 메타데이터 생성 (태그, 라벨)
+      - name: Extract metadata for Docker
+        id: meta                                         # 다른 step에서 참조할 ID
+        uses: docker/metadata-action@v5                  # 태그/라벨 자동 생성 Action
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}  # 이미지 경로
+          tags: |
+            type=raw,value=latest                        # latest 태그 (항상)
+            type=sha,prefix=sha-                         # sha-abc1234 태그 (커밋 해시)
+
+      # 5. Docker 이미지 빌드 및 GHCR 푸시
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6                # Docker 빌드 + 푸시 통합 Action
+        with:
+          context: .                                     # 빌드 컨텍스트: 프로젝트 루트
+          file: ${{ matrix.dockerfile }}                  # Dockerfile 경로
+          push: true                                     # 빌드 후 레지스트리에 푸시
+          tags: ${{ steps.meta.outputs.tags }}            # 메타데이터에서 생성된 태그
+          labels: ${{ steps.meta.outputs.labels }}        # 메타데이터에서 생성된 라벨
+          cache-from: type=gha,scope=${{ matrix.module }}  # 모듈별 캐시 분리 (캐시 충돌 방지)
+          cache-to: type=gha,scope=${{ matrix.module }},mode=max  # 모듈별 캐시 저장

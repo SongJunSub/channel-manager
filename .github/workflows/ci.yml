@@ -1,0 +1,79 @@
+# =============================================================================
+# CI 워크플로우 — Kotlin/Java 모듈 빌드 및 테스트
+# =============================================================================
+# 트리거: main 브랜치 push 또는 main 대상 PR
+# 매트릭스 전략으로 Kotlin/Java 모듈을 병렬 빌드 & 테스트
+# =============================================================================
+
+name: CI  # GitHub Actions 탭에 표시되는 워크플로우 이름
+
+# ---------------------------------------------------------------------------
+# 트리거 이벤트 정의
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [main]          # main 브랜치에 push 시 실행
+    paths-ignore:             # 문서 변경은 빌드 불필요 → 무시
+      - 'docs/**'
+      - '**/*.md'             # 모든 경로의 마크다운 파일 무시
+  pull_request:
+    branches: [main]          # main 대상 PR 생성/업데이트 시 실행
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+# ---------------------------------------------------------------------------
+# 최소 권한 원칙 — 필요한 권한만 명시적으로 선언
+# ---------------------------------------------------------------------------
+permissions:
+  contents: read              # 소스 코드 읽기만 필요
+
+# ---------------------------------------------------------------------------
+# 빌드 & 테스트 Job
+# ---------------------------------------------------------------------------
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.module }})  # 매트릭스 변수로 Job 이름 동적 생성
+    runs-on: ubuntu-latest                     # GitHub 호스티드 러너 (Ubuntu 최신)
+
+    # 매트릭스 전략 — Kotlin, Java 모듈을 병렬로 실행
+    strategy:
+      matrix:
+        module: [channel-manager-kotlin, channel-manager-java]
+      fail-fast: false  # 하나가 실패해도 나머지 계속 실행 (두 모듈 결과를 모두 확인)
+
+    steps:
+      # 1. 소스 코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4  # GitHub 공식 체크아웃 Action (v4 = Node 20 기반)
+
+      # 2. JDK 25 설정
+      - name: Setup JDK 25
+        uses: actions/setup-java@v4  # GitHub 공식 Java 설정 Action
+        with:
+          java-version: '25'              # 프로젝트에서 사용하는 Java 버전
+          distribution: 'temurin'         # Eclipse Temurin (Adoptium) 배포판
+
+      # 3. Gradle Wrapper 실행 권한 부여
+      # git config에 따라 실행 권한이 없을 수 있으므로 안전장치로 유지
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 4. Gradle 설정 (의존성 캐싱 + 빌드 스캔)
+      # setup-gradle이 데몬 관리 및 캐싱을 자동 처리
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4  # Gradle 공식 Action (캐싱 + 빌드 스캔)
+
+      # 5. 빌드 및 테스트 실행
+      # Testcontainers가 Docker로 PostgreSQL을 자동 기동하므로 별도 DB 서비스 불필요
+      - name: Build and test ${{ matrix.module }}
+        run: ./gradlew :${{ matrix.module }}:build  # 모듈별 빌드 + 테스트
+
+      # 6. 테스트 리포트 업로드 (실패 시에도 업로드하여 원인 분석 가능)
+      - name: Upload test report
+        if: always()  # 테스트 실패해도 항상 실행
+        uses: actions/upload-artifact@v4  # 빌드 산출물 업로드 Action
+        with:
+          name: test-report-${{ matrix.module }}                         # 아티팩트 이름
+          path: ${{ matrix.module }}/build/reports/tests/test/           # JUnit 테스트 리포트 경로
+          retention-days: 7                                              # 7일 후 자동 삭제
