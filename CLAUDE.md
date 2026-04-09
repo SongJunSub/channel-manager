@@ -210,3 +210,8 @@ channel-manager/
 - 리포지토리: https://github.com/SongJunSub/channel-manager
 - 커밋 컨벤션: Conventional Commits
 - Phase 완료 시마다 커밋 & 푸시
+
+## 커밋 전 필수 검증
+- 커밋 & 푸시 전에 반드시 `/simplify`를 3개의 병렬 리뷰 에이전트로 실행한다.
+- 3명의 개발자가 코드를 리뷰하는 것처럼 Code Reuse / Code Quality / Efficiency 관점에서 검증한다.
+- 리뷰에서 발견된 이슈를 수정한 후에만 커밋 & 푸시한다.
