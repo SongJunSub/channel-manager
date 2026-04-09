@@ -1,0 +1,24 @@
+# Docker 빌드 컨텍스트에서 제외할 파일/디렉토리
+# 빌드 컨텍스트가 작을수록 이미지 빌드가 빨라진다
+
+# Gradle 빌드 결과물 (컨테이너 내에서 새로 빌드)
+**/build/
+**/.gradle/
+
+# IDE 설정 파일
+.idea/
+*.iml
+.vscode/
+
+# Git 관련
+.git/
+.gitignore
+
+# 문서 (이미지에 불필요)
+docs/
+*.md
+
+# Docker 관련 (재귀 방지)
+**/Dockerfile
+docker-compose.yml
+.dockerignore

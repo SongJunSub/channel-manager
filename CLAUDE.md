@@ -186,6 +186,17 @@ channel-manager/
 - 재고 부족 시 초과 예약 방지: 재고 0일 때 모든 추가 예약 400 실패
 - 통합 테스트 (Kotlin 2개 + Java 2개)
 
+### Phase 15 - Docker 이미지 빌드 (컨테이너화) ✅
+- 개념 MD 작성 (phase15-docker.md)
+- application.yml 환경변수화: DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD (기본값으로 로컬 개발 호환)
+- 멀티스테이지 Dockerfile (Kotlin + Java): eclipse-temurin:25-jdk-alpine(빌드) → 25-jre-alpine(실행)
+- 레이어 캐싱 최적화: Gradle Wrapper → 빌드 설정 → 의존성 다운로드 → 소스 복사 → 빌드
+- 보안: 비루트 사용자(appuser) 실행, JVM 컨테이너 메모리 인식(-XX:+UseContainerSupport)
+- docker-compose.yml 확장: PostgreSQL + kotlin-app + java-app 통합 (healthcheck + depends_on)
+- .dockerignore 추가: 빌드 결과물, IDE 설정, docs 제외
+- 이미지 크기: Kotlin 181MB, Java 168MB
+- 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
+
 ## 환경 정보
 - Java: 25 (OpenJDK 25.0.2)
 - Kotlin: 2.3.10
