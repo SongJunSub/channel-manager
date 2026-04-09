@@ -33,6 +33,9 @@ dependencies {
     // === 구조화 로깅 (Phase 12) ===
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
 
+    // === Rate Limiting (Phase 17) ===
+    implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
+
     // === Kotlin 지원 ===
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")  // Jackson Kotlin 모듈 (JSON 직렬화)
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")  // Reactor Kotlin 확장 함수

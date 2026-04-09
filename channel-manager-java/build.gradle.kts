@@ -31,6 +31,9 @@ dependencies {
     // === 구조화 로깅 (Phase 12) ===
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
 
+    // === Rate Limiting (Phase 17) ===
+    implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
+
     // === Lombok (Java 보일러플레이트 코드 제거) ===
     compileOnly("org.projectlombok:lombok")           // 컴파일 시에만 필요 (getter, setter 등 자동 생성)
     annotationProcessor("org.projectlombok:lombok")   // Lombok 어노테이션 프로세서

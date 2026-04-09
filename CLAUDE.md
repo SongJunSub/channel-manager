@@ -197,6 +197,14 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 17 - Rate Limiting (API 호출 제한) ✅
+- 개념 MD 작성 (phase17-rate-limiting.md)
+- Bucket4j (bucket4j_jdk17-core:8.16.1) 의존성 추가
+- RateLimitFilter (WebFilter): Token Bucket 알고리즘 기반 IP별 호출 제한 (Kotlin + Java)
+- 정책: IP당 초당 50건, 초과 시 429 Too Many Requests + Retry-After 헤더
+- 제외 경로: Swagger UI, OpenAPI 스펙, 대시보드, SSE 스트림
+- 통합 테스트 (Kotlin 4개 + Java 4개): 정상 응답, 429 반환, Retry-After, 제외 경로
+
 ### Phase 16 - GitHub Actions CI/CD ✅
 - 개념 MD 작성 (phase16-cicd.md)
 - CI 워크플로우 (.github/workflows/ci.yml): push/PR 시 Kotlin/Java 모듈 병렬 빌드 + 테스트
