@@ -1,6 +1,8 @@
 package com.channelmanager.java.service; // 서비스 패키지 - 비즈니스 로직 계층
 
 import com.channelmanager.java.domain.ChannelEvent; // 채널 이벤트 엔티티
+import org.slf4j.Logger; // SLF4J 로거 인터페이스
+import org.slf4j.LoggerFactory; // SLF4J 로거 팩토리
 import com.channelmanager.java.domain.EventType; // 이벤트 타입 enum
 import com.channelmanager.java.domain.Reservation; // 예약 엔티티
 import com.channelmanager.java.domain.ReservationStatus; // 예약 상태 enum
@@ -28,12 +30,16 @@ import java.time.LocalDate; // 날짜 타입 (필터링용)
 @RequiredArgsConstructor
 public class ReservationService {
 
+    // SLF4J 로거
+    private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
+
     private final ReservationRepository reservationRepository;     // 예약 DB 접근
     private final ChannelRepository channelRepository;             // 채널 DB 접근
     private final RoomTypeRepository roomTypeRepository;           // 객실 타입 DB 접근
     private final InventoryRepository inventoryRepository;         // 재고 DB 접근
     private final ChannelEventRepository channelEventRepository;   // 이벤트 DB 접근
     private final EventPublisher eventPublisher;                   // Phase 4: 이벤트 발행 서비스
+    private final CacheService cacheService;                       // Phase 18: Redis 캐시 무효화
 
     // ===== Phase 9: 예약 조회 =====
 
@@ -175,6 +181,10 @@ public class ReservationService {
                                     reservation, channel.getChannelCode()
                                 )
                             )
+                            .doOnNext(response -> // Phase 18: 예약 생성 후 통계 캐시 무효화
+                                cacheService.evictStatisticsCache()
+                                .subscribe(null, e -> log.warn("캐시 무효화 실패", e))
+                            )
                     )
             );
     }
@@ -252,6 +262,10 @@ public class ReservationService {
                                 ReservationResponse.from(
                                     cancelledReservation, channel.getChannelCode()
                                 )
+                            )
+                            .doOnNext(response -> // Phase 18: 예약 취소 후 통계 캐시 무효화
+                                cacheService.evictStatisticsCache()
+                                .subscribe(null, e -> log.warn("캐시 무효화 실패", e))
                             )
                     );
             });

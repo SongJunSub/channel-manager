@@ -34,6 +34,9 @@ dependencies {
     // === Rate Limiting (Phase 17) ===
     implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
 
+    // === Redis 캐싱 (Phase 18) ===
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")  // Reactive Redis (Lettuce 드라이버)
+
     // === Lombok (Java 보일러플레이트 코드 제거) ===
     compileOnly("org.projectlombok:lombok")           // 컴파일 시에만 필요 (getter, setter 등 자동 생성)
     annotationProcessor("org.projectlombok:lombok")   // Lombok 어노테이션 프로세서
@@ -44,6 +47,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")  // Phase 13: Testcontainers Spring Boot 통합
     testImplementation("org.testcontainers:postgresql:1.21.0")                  // Phase 13: PostgreSQL Testcontainers 모듈
     testImplementation("org.testcontainers:r2dbc:1.21.0")                      // Phase 13: R2DBC Testcontainers 모듈 (@ServiceConnection R2DBC 지원)
+    testImplementation("com.redis:testcontainers-redis:2.2.4")                 // Phase 18: Redis Testcontainers 모듈
 }
 
 // 테스트 실행 시 JUnit Platform 사용

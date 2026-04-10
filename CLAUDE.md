@@ -197,6 +197,18 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 18 - Redis 캐싱 ✅
+- 개념 MD 작성 (phase18-redis-caching.md)
+- spring-boot-starter-data-redis-reactive 의존성 추가 (Lettuce 드라이버)
+- RedisConfig: ReactiveRedisTemplate<String, String> 문자열 직렬화 + ObjectMapper 빈
+- CacheService: Cache-Aside 패턴 (getOrLoad + evictStatisticsCache)
+- StatisticsController: 4개 통계 API에 Redis 캐시 적용 (TTL 5분)
+- ReservationService: 예약 생성/취소 시 통계 캐시 무효화 (doOnNext)
+- docker-compose.yml: Redis 7 Alpine 서비스 추가 + healthcheck
+- application.yml: Redis 호스트/포트 환경변수화 + Rate Limit 설정 외부화
+- Testcontainers: Redis 컨테이너 추가 (com.redis:testcontainers-redis)
+- RateLimitFilter: 설정값 외부화 (@Value) — 테스트 안정성 확보
+
 ### Phase 17 - Rate Limiting (API 호출 제한) ✅
 - 개념 MD 작성 (phase17-rate-limiting.md)
 - Bucket4j (bucket4j_jdk17-core:8.16.1) 의존성 추가

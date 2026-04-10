@@ -18,7 +18,10 @@ import java.time.Duration // 시간 간격
 //   — 같은 IP의 버킷을 공유하므로, Rate Limit 초과 테스트가 먼저 실행되면
 //     정상 요청 테스트가 토큰 부족으로 실패할 수 있다
 @Import(TestcontainersConfig::class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = ["rate-limit.capacity=50", "rate-limit.refill-tokens=50"] // Rate Limit 테스트용 낮은 값
+)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RateLimitFilterTest {

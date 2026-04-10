@@ -20,6 +20,17 @@ spring:
     password: ${DB_PASSWORD:postgres}  # DB 비밀번호
     locations: classpath:db/migration  # 마이그레이션 SQL 파일 경로 (common 모듈에서 제공)
 
+  # Phase 18: Redis 설정 (Reactive Lettuce 드라이버)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}  # Redis 호스트 (Docker: redis 서비스명)
+      port: ${REDIS_PORT:6379}       # Redis 포트
+
+# Phase 17: Rate Limiting 설정
+rate-limit:
+  capacity: ${RATE_LIMIT_CAPACITY:50}          # 버킷 최대 용량 (기본 50/초)
+  refill-tokens: ${RATE_LIMIT_REFILL:50}       # 충전 토큰 수
+
 server:
   port: 8081  # Java 모듈 서버 포트 (Kotlin 모듈과 충돌 방지)
 

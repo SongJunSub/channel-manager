@@ -1,6 +1,7 @@
 package com.channelmanager.kotlin.service // 서비스 패키지 - 비즈니스 로직 계층
 
 import com.channelmanager.kotlin.domain.ChannelEvent // 채널 이벤트 엔티티
+import org.slf4j.LoggerFactory // SLF4J 로거 팩토리
 import com.channelmanager.kotlin.domain.EventType // 이벤트 타입 enum
 import com.channelmanager.kotlin.domain.Reservation // 예약 엔티티
 import com.channelmanager.kotlin.domain.ReservationStatus // 예약 상태 enum
@@ -30,8 +31,13 @@ class ReservationService(
     private val roomTypeRepository: RoomTypeRepository,           // 객실 타입 DB 접근
     private val inventoryRepository: InventoryRepository,         // 재고 DB 접근
     private val channelEventRepository: ChannelEventRepository,   // 이벤트 DB 접근
-    private val eventPublisher: EventPublisher                    // Phase 4: 이벤트 발행 서비스
+    private val eventPublisher: EventPublisher,                   // Phase 4: 이벤트 발행 서비스
+    private val cacheService: CacheService                        // Phase 18: Redis 캐시 무효화
 ) {
+    // SLF4J 로거
+    companion object {
+        private val log = LoggerFactory.getLogger(ReservationService::class.java)
+    }
 
     // ===== Phase 9: 예약 조회 =====
 
@@ -184,6 +190,10 @@ class ReservationService(
                             .map { reservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(reservation, channel.channelCode)
                             }
+                            .doOnNext { // Phase 18: 예약 생성 후 통계 캐시 무효화
+                                cacheService.evictStatisticsCache()
+                                    .subscribe(null) { e -> log.warn("캐시 무효화 실패", e) }
+                            }
                     }
             }
 
@@ -254,6 +264,10 @@ class ReservationService(
                             }
                             .map { cancelledReservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(cancelledReservation, channel.channelCode)
+                            }
+                            .doOnNext { // Phase 18: 예약 취소 후 통계 캐시 무효화
+                                cacheService.evictStatisticsCache()
+                                    .subscribe(null) { e -> log.warn("캐시 무효화 실패", e) }
                             }
                     }
             }

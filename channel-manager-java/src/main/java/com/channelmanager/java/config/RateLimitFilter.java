@@ -36,10 +36,15 @@ public class RateLimitFilter implements WebFilter {
     // SLF4J 로거
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
-    // Rate Limiting 설정값
-    private static final long CAPACITY = 50;          // 버킷 최대 용량 (초당 최대 50건 버스트)
-    private static final long REFILL_TOKENS = 50;     // 충전할 토큰 수
-    private static final Duration REFILL_DURATION = Duration.ofSeconds(1); // 충전 주기 (1초)
+    // Rate Limiting 설정값 — application.yml에서 오버라이드 가능
+    // 테스트 환경에서는 더 큰 값을 설정하여 테스트 안정성을 확보한다
+    @org.springframework.beans.factory.annotation.Value("${rate-limit.capacity:50}")
+    private long capacity = 50;          // 버킷 최대 용량 (초당 최대 50건 버스트)
+
+    @org.springframework.beans.factory.annotation.Value("${rate-limit.refill-tokens:50}")
+    private long refillTokens = 50;     // 충전할 토큰 수
+
+    private final Duration refillDuration = Duration.ofSeconds(1); // 충전 주기 (1초)
 
     // IP별 버킷 저장소 — ConcurrentHashMap으로 스레드 안전하게 관리
     // Key: 클라이언트 IP 주소
@@ -122,8 +127,8 @@ public class RateLimitFilter implements WebFilter {
         return Bucket.builder()
             .addLimit(
                 Bandwidth.builder()
-                    .capacity(CAPACITY)                           // 버킷 최대 용량
-                    .refillGreedy(REFILL_TOKENS, REFILL_DURATION) // 1초마다 50개 충전
+                    .capacity(capacity)                           // 버킷 최대 용량
+                    .refillGreedy(refillTokens, refillDuration)   // 1초마다 토큰 충전
                     .build()
             )
             .build();

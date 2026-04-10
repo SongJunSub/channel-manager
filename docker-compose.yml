@@ -22,9 +22,14 @@ x-app-common: &app-common
     DB_NAME: channel_manager                       # 데이터베이스명
     DB_USERNAME: postgres                          # DB 사용자명
     DB_PASSWORD: postgres                          # DB 비밀번호
+    # Redis 접속 정보 (Phase 18)
+    REDIS_HOST: redis                              # Redis 서비스명 → DNS 자동 해석
+    REDIS_PORT: 6379                               # Redis 포트
   depends_on:
     postgres:
       condition: service_healthy                   # postgres가 healthy일 때만 시작
+    redis:
+      condition: service_healthy                   # redis가 healthy일 때만 시작
   restart: on-failure                              # 비정상 종료 시 자동 재시작
 
 services:
@@ -49,6 +54,21 @@ services:
       timeout: 3s                                    # 3초 이내 응답 없으면 실패
       retries: 5                                     # 5회 실패 시 unhealthy
       start_period: 10s                              # 시작 후 10초는 실패 무시
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — 캐시 서버 (Phase 18)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine                            # Redis 7 경량 이미지
+    container_name: channel-manager-redis             # 컨테이너 이름
+    ports:
+      - "6379:6379"                                  # 호스트:컨테이너 포트 매핑
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]             # PONG 응답 확인
+      interval: 5s                                   # 5초마다 체크
+      timeout: 3s                                    # 3초 이내 응답 없으면 실패
+      retries: 5                                     # 5회 실패 시 unhealthy
+      start_period: 5s                               # 시작 후 5초는 실패 무시
 
   # ---------------------------------------------------------------------------
   # Kotlin 모듈 — Spring Boot WebFlux (포트 8080)
