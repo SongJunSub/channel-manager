@@ -66,7 +66,8 @@ public class RateLimitFilter implements WebFilter {
         "/index.html",       // 실시간 대시보드
         "/css/",             // CSS 정적 리소스
         "/js/",              // JS 정적 리소스
-        "/api/events/stream" // SSE 스트림 (장기 연결이므로 제외)
+        "/api/events/stream", // SSE 스트림 (장기 연결이므로 제외)
+        "/actuator"          // Phase 19: Actuator 엔드포인트 (Prometheus 스크래핑, /actuator 및 /actuator/* 모두 매칭)
     );
 
     // 루트 경로("/")도 제외 — Spring Boot가 "/" → index.html로 리다이렉트한다

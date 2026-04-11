@@ -34,6 +34,21 @@ rate-limit:
 server:
   port: 8081  # Java 모듈 서버 포트 (Kotlin 모듈과 충돌 방지)
 
+# Phase 19: Actuator + Prometheus 모니터링 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus  # 외부 노출할 Actuator 엔드포인트
+  endpoint:
+    health:
+      show-details: always  # 헬스 체크 상세 정보 표시 (DB, Redis 상태 포함)
+      # 주의: 프로덕션에서는 when-authorized로 변경하여 인증된 사용자만 상세 정보를 볼 수 있도록 해야 한다
+  prometheus:
+    metrics:
+      export:
+        enabled: true  # Prometheus 메트릭 내보내기 활성화
+
 # Phase 11: SpringDoc OpenAPI 설정
 springdoc:
   api-docs:

@@ -33,6 +33,10 @@ dependencies {
     // === 구조화 로깅 (Phase 12) ===
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
 
+    // === 모니터링 (Phase 19) ===
+    implementation("org.springframework.boot:spring-boot-starter-actuator")  // Actuator 엔드포인트 (health, metrics 등)
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")              // Prometheus 메트릭 레지스트리
+
     // === Rate Limiting (Phase 17) ===
     implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
 

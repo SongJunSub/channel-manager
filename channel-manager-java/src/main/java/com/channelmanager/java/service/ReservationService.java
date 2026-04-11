@@ -1,6 +1,7 @@
 package com.channelmanager.java.service; // 서비스 패키지 - 비즈니스 로직 계층
 
 import com.channelmanager.java.domain.ChannelEvent; // 채널 이벤트 엔티티
+import io.micrometer.core.instrument.MeterRegistry; // Phase 19: Micrometer 메트릭 등록소
 import org.slf4j.Logger; // SLF4J 로거 인터페이스
 import org.slf4j.LoggerFactory; // SLF4J 로거 팩토리
 import com.channelmanager.java.domain.EventType; // 이벤트 타입 enum
@@ -40,6 +41,7 @@ public class ReservationService {
     private final ChannelEventRepository channelEventRepository;   // 이벤트 DB 접근
     private final EventPublisher eventPublisher;                   // Phase 4: 이벤트 발행 서비스
     private final CacheService cacheService;                       // Phase 18: Redis 캐시 무효화
+    private final MeterRegistry meterRegistry;                    // Phase 19: Micrometer 메트릭 등록소
 
     // ===== Phase 9: 예약 조회 =====
 
@@ -181,10 +183,17 @@ public class ReservationService {
                                     reservation, channel.getChannelCode()
                                 )
                             )
-                            .doOnNext(response -> // Phase 18: 예약 생성 후 통계 캐시 무효화
+                            .doOnNext(response -> { // Phase 18+19: 예약 생성 후 캐시 무효화 + 메트릭 기록
+                                // Phase 18: 통계 캐시 무효화
                                 cacheService.evictStatisticsCache()
-                                .subscribe(null, e -> log.warn("캐시 무효화 실패", e))
-                            )
+                                    .subscribe(null, e -> log.warn("캐시 무효화 실패", e));
+                                // Phase 19: 예약 생성 카운터 증가 (채널별 태그 포함)
+                                // Prometheus에서 reservations_created_total{channel="BOOKING"} 로 조회 가능
+                                meterRegistry.counter(
+                                    "reservations.created", // 메트릭 이름
+                                    "channel", channel.getChannelCode() // 채널 태그
+                                ).increment();
+                            })
                     )
             );
     }
@@ -263,10 +272,16 @@ public class ReservationService {
                                     cancelledReservation, channel.getChannelCode()
                                 )
                             )
-                            .doOnNext(response -> // Phase 18: 예약 취소 후 통계 캐시 무효화
+                            .doOnNext(response -> { // Phase 18+19: 예약 취소 후 캐시 무효화 + 메트릭 기록
+                                // Phase 18: 통계 캐시 무효화
                                 cacheService.evictStatisticsCache()
-                                .subscribe(null, e -> log.warn("캐시 무효화 실패", e))
-                            )
+                                    .subscribe(null, e -> log.warn("캐시 무효화 실패", e));
+                                // Phase 19: 예약 취소 카운터 증가 (채널별 태그 포함)
+                                meterRegistry.counter(
+                                    "reservations.cancelled",
+                                    "channel", channel.getChannelCode()
+                                ).increment();
+                            })
                     );
             });
     }

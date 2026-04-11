@@ -197,6 +197,17 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 19 - 모니터링 (Actuator + Prometheus + Grafana) ✅
+- 개념 MD 작성 (phase19-monitoring.md)
+- spring-boot-starter-actuator + micrometer-registry-prometheus 의존성 추가
+- application.yml: Actuator 엔드포인트 노출 (health, info, metrics, prometheus)
+- 헬스 체크 상세 표시: show-details: always (DB, Redis 상태 포함)
+- 커스텀 비즈니스 메트릭: reservations.created (채널별 태그), reservations.cancelled
+- Prometheus (prom/prometheus:v3.4.0): 10초 간격 스크래핑, prometheus.yml 설정
+- Grafana (grafana/grafana:11.6.0): Prometheus 데이터소스 자동 프로비저닝
+- docker-compose.yml: Prometheus(:9090) + Grafana(:3000) 서비스 추가
+- RateLimitFilter: /actuator/ 경로 Rate Limiting 제외 추가
+
 ### Phase 18 - Redis 캐싱 ✅
 - 개념 MD 작성 (phase18-redis-caching.md)
 - spring-boot-starter-data-redis-reactive 의존성 추가 (Lettuce 드라이버)

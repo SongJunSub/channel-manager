@@ -1,0 +1,35 @@
+# =============================================================================
+# Prometheus 설정 — 메트릭 스크래핑 타겟 정의
+# =============================================================================
+# Prometheus가 주기적으로 각 타겟의 /actuator/prometheus 엔드포인트에서
+# 메트릭 데이터를 Pull 방식으로 수집한다
+# =============================================================================
+
+global:
+  scrape_interval: 15s      # 15초마다 메트릭 수집 (기본값)
+  evaluation_interval: 15s  # 15초마다 알림 규칙 평가
+
+# 스크래핑 타겟 설정
+scrape_configs:
+  # Prometheus 자체 메트릭
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']  # Prometheus 자기 자신
+
+  # Kotlin 모듈 (Spring Boot WebFlux)
+  - job_name: 'kotlin-app'
+    metrics_path: '/actuator/prometheus'  # Spring Boot Actuator Prometheus 엔드포인트
+    scrape_interval: 10s                  # 10초마다 수집 (앱은 더 자주)
+    static_configs:
+      - targets: ['kotlin-app:8080']      # Docker 네트워크의 서비스명:포트
+        labels:
+          module: 'kotlin'                # 라벨로 모듈 구분
+
+  # Java 모듈 (Spring Boot WebFlux)
+  - job_name: 'java-app'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['java-app:8081']
+        labels:
+          module: 'java'

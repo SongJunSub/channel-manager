@@ -94,8 +94,44 @@ services:
     ports:
       - "8081:8081"                                  # Java 모듈 포트 매핑
 
+  # ---------------------------------------------------------------------------
+  # Prometheus — 메트릭 수집 및 시계열 DB (Phase 19)
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.4.0                    # Prometheus 최신 안정 버전
+    container_name: channel-manager-prometheus        # 컨테이너 이름
+    ports:
+      - "9090:9090"                                  # Prometheus Web UI 포트
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro  # 설정 파일 마운트 (읽기 전용)
+      - prometheus-data:/prometheus                  # 시계열 데이터 영속화
+    depends_on:
+      kotlin-app:
+        condition: service_started                   # 앱이 시작된 후 스크래핑 시작
+      java-app:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Grafana — 메트릭 시각화 대시보드 (Phase 19)
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.6.0                    # Grafana 최신 안정 버전
+    container_name: channel-manager-grafana           # 컨테이너 이름
+    ports:
+      - "3000:3000"                                  # Grafana Web UI 포트
+    environment:
+      GF_SECURITY_ADMIN_USER: admin                  # 관리자 ID
+      GF_SECURITY_ADMIN_PASSWORD: admin              # 관리자 비밀번호
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro  # 데이터소스 자동 프로비저닝
+      - grafana-data:/var/lib/grafana                # 대시보드/설정 영속화
+    depends_on:
+      - prometheus                                   # Prometheus가 먼저 시작
+
 # =============================================================================
 # 네임드 볼륨 정의 — 컨테이너 삭제 후에도 데이터 유지
 # =============================================================================
 volumes:
   channel-manager-pgdata:                            # PostgreSQL 데이터 볼륨
+  prometheus-data:                                   # Prometheus 시계열 데이터
+  grafana-data:                                      # Grafana 대시보드/설정
