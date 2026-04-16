@@ -1,0 +1,16 @@
+# Kotlin 모듈 Service — 외부에서 접근 가능한 LoadBalancer
+# LoadBalancer 타입: 클라우드 환경에서 외부 로드밸런서를 자동 프로비저닝한다
+# 로컬 K8s (minikube, Docker Desktop)에서는 NodePort처럼 동작한다
+# 2개의 Pod로 트래픽이 라운드로빈으로 분산된다
+apiVersion: v1
+kind: Service
+metadata:
+  name: kotlin-app                 # Service 이름 = DNS 이름
+  namespace: channel-manager
+spec:
+  selector:
+    app: kotlin-app                # 이 라벨을 가진 Pod로 트래픽 라우팅
+  ports:
+    - port: 8080                   # Service 포트 (외부 접근 포트)
+      targetPort: 8080             # Pod 포트
+  type: LoadBalancer               # 외부 노출 (클라우드 LB 또는 로컬 NodePort)

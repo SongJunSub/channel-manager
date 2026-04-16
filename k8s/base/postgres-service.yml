@@ -1,0 +1,16 @@
+# PostgreSQL Service — 클러스터 내부에서 postgres:5432로 접근 가능
+# ClusterIP (기본값): 클러스터 내부에서만 접근 — DB는 외부에 노출할 필요 없음
+# Pod의 IP는 재시작 시 변경되지만, Service는 안정적인 DNS 이름을 제공한다
+# 앱에서 DB_HOST=postgres로 설정하면 이 Service를 통해 Pod에 연결된다
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres                   # Service 이름 = DNS 이름
+  namespace: channel-manager
+spec:
+  selector:
+    app: postgres                  # 이 라벨을 가진 Pod로 트래픽 라우팅
+  ports:
+    - port: 5432                   # Service 포트
+      targetPort: 5432             # Pod 포트
+  type: ClusterIP                  # 클러스터 내부 전용

@@ -1,0 +1,63 @@
+# Java 모듈 Deployment
+# Kotlin 모듈과 동일한 구조이지만 이미지와 포트가 다르다
+# 두 모듈을 동시에 배포하여 Kotlin/Java 구현을 비교할 수 있다
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app                   # Deployment 이름
+  namespace: channel-manager
+  labels:
+    app: java-app
+spec:
+  replicas: 2                      # 2개의 Pod로 고가용성 확보
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+    spec:
+      containers:
+        - name: java-app
+          image: ghcr.io/songjunsub/channel-manager-java:latest  # GHCR 이미지
+          imagePullPolicy: Always    # :latest 태그 사용 시 항상 최신 이미지 Pull
+          ports:
+            - containerPort: 8081  # Spring Boot 서버 포트 (Java 모듈은 8081)
+          # ConfigMap에서 비민감 설정 주입
+          envFrom:
+            - configMapRef:
+                name: app-config   # DB_HOST, DB_PORT, REDIS_HOST 등
+          # Secret에서 민감 설정 주입
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+          # Actuator 헬스 체크
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081           # Java 모듈 포트
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

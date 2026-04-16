@@ -197,6 +197,18 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 20 - Kubernetes 배포 ✅
+- 개념 MD 작성 (phase20-kubernetes.md)
+- Kustomize 기반 K8s 매니페스트 (k8s/base/)
+- Namespace: channel-manager
+- ConfigMap: DB/Redis 접속 정보, Rate Limit 설정
+- Secret: DB 비밀번호 (base64)
+- PostgreSQL: Deployment(1 replica) + PVC(1Gi) + ClusterIP Service
+- Redis: Deployment(1 replica, 리소스 제한) + ClusterIP Service
+- Kotlin앱: Deployment(2 replicas, liveness/readiness probe) + LoadBalancer Service
+- Java앱: Deployment(2 replicas, liveness/readiness probe) + LoadBalancer Service
+- 배포: kubectl apply -k k8s/base/
+
 ### Phase 19 - 모니터링 (Actuator + Prometheus + Grafana) ✅
 - 개념 MD 작성 (phase19-monitoring.md)
 - spring-boot-starter-actuator + micrometer-registry-prometheus 의존성 추가

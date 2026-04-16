@@ -1,0 +1,14 @@
+# Redis Service — 클러스터 내부에서 redis:6379로 접근 가능
+# ClusterIP: 캐시 서버는 클러스터 내부에서만 접근
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis                      # Service 이름 = DNS 이름
+  namespace: channel-manager
+spec:
+  selector:
+    app: redis                     # 이 라벨을 가진 Pod로 트래픽 라우팅
+  ports:
+    - port: 6379                   # Service 포트
+      targetPort: 6379             # Pod 포트
+  type: ClusterIP                  # 클러스터 내부 전용

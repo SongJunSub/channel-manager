@@ -1,0 +1,38 @@
+# =============================================================================
+# Kustomize 설정 — 모든 K8s 리소스를 통합 관리
+# =============================================================================
+# 사용법:
+#   매니페스트 미리보기:  kubectl kustomize k8s/base/
+#   클러스터에 배포:      kubectl apply -k k8s/base/
+#   배포 삭제:           kubectl delete -k k8s/base/
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 프로젝트 네임스페이스 — 모든 리소스에 자동 적용
+namespace: channel-manager
+
+# 공통 라벨 — 모든 리소스에 자동 추가
+labels:
+  - pairs:
+      project: channel-manager
+    includeSelectors: true         # Deployment의 selector.matchLabels에도 추가
+
+# 배포할 리소스 목록 (적용 순서대로 나열)
+resources:
+  # 1. 네임스페이스 (가장 먼저 생성)
+  - namespace.yml
+  # 2. 설정 (ConfigMap, Secret)
+  - configmap.yml
+  - secret.yml
+  # 3. 인프라 서비스 (PostgreSQL, Redis)
+  - postgres-deployment.yml
+  - postgres-service.yml
+  - redis-deployment.yml
+  - redis-service.yml
+  # 4. 애플리케이션 서비스 (Kotlin, Java)
+  - kotlin-deployment.yml
+  - kotlin-service.yml
+  - java-deployment.yml
+  - java-service.yml

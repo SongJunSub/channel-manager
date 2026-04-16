@@ -1,0 +1,37 @@
+# Redis Deployment
+# 캐시 서버로 사용하므로 영속 스토리지 없이 운영한다 (Pod 재시작 시 캐시 초기화)
+# 프로덕션에서는 Redis Sentinel 또는 Redis Cluster로 고가용성을 확보해야 한다
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis                      # Deployment 이름
+  namespace: channel-manager
+  labels:
+    app: redis
+spec:
+  replicas: 1                      # 단일 인스턴스
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine              # 프로덕션과 동일한 이미지
+          ports:
+            - containerPort: 6379            # Redis 포트
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"] # PONG 응답 확인
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "64Mi"                 # 최소 메모리
+              cpu: "50m"                     # 최소 CPU (50 millicores)
+            limits:
+              memory: "128Mi"               # 최대 메모리
+              cpu: "100m"                    # 최대 CPU

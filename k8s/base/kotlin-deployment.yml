@@ -1,0 +1,68 @@
+# Kotlin 모듈 Deployment
+# 2개의 레플리카로 고가용성을 확보한다 (하나의 Pod가 죽어도 서비스 유지)
+# Actuator 헬스 체크 엔드포인트로 liveness/readiness를 확인한다
+# ConfigMap과 Secret에서 환경변수를 주입받아 DB/Redis에 연결한다
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kotlin-app                 # Deployment 이름
+  namespace: channel-manager
+  labels:
+    app: kotlin-app
+spec:
+  replicas: 2                      # 2개의 Pod로 고가용성 확보
+  selector:
+    matchLabels:
+      app: kotlin-app
+  template:
+    metadata:
+      labels:
+        app: kotlin-app
+    spec:
+      containers:
+        - name: kotlin-app
+          image: ghcr.io/songjunsub/channel-manager-kotlin:latest  # GHCR 이미지
+          imagePullPolicy: Always    # :latest 태그 사용 시 항상 최신 이미지 Pull
+          ports:
+            - containerPort: 8080  # Spring Boot 서버 포트
+          # ConfigMap에서 비민감 설정 주입
+          envFrom:
+            - configMapRef:
+                name: app-config   # DB_HOST, DB_PORT, REDIS_HOST 등
+          # Secret에서 민감 설정 주입
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+          # Phase 19: Actuator 헬스 체크 — Pod 생존 확인
+          # 실패 시 K8s가 Pod를 자동 재시작한다
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30  # 앱 초기화 대기 (Flyway 마이그레이션 포함)
+            periodSeconds: 10        # 10초마다 체크
+            failureThreshold: 3      # 3회 실패 시 재시작
+          # Phase 19: Actuator 헬스 체크 — 요청 수용 가능 여부
+          # 실패 시 Service에서 해당 Pod를 제외한다 (트래픽 차단)
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10  # 시작 후 10초 대기
+            periodSeconds: 5         # 5초마다 체크
+          # 리소스 제한 — Pod가 사용할 수 있는 최대 CPU/메모리
+          resources:
+            requests:
+              memory: "256Mi"        # 최소 메모리 보장
+              cpu: "200m"            # 최소 CPU (200 millicores)
+            limits:
+              memory: "512Mi"        # 최대 메모리 (초과 시 OOMKilled)
+              cpu: "500m"            # 최대 CPU
