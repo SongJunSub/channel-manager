@@ -4,11 +4,12 @@ import org.junit.jupiter.api.Test // JUnit 5 테스트 어노테이션
 import org.springframework.beans.factory.annotation.Autowired // 의존성 주입 어노테이션
 import org.springframework.boot.test.context.SpringBootTest // 전체 애플리케이션 컨텍스트 로드
 import com.channelmanager.kotlin.config.TestcontainersConfig
+import com.channelmanager.kotlin.config.TestSecurityConfig // Phase 21: 테스트 보안 설정
 import org.springframework.context.annotation.Import
 import reactor.test.StepVerifier // Reactor 스트림 검증 도구
 import java.time.LocalDate // 날짜 타입
 
-@Import(TestcontainersConfig::class)
+@Import(TestcontainersConfig::class, TestSecurityConfig::class)
 @SpringBootTest
 class InventoryRepositoryTest {
 

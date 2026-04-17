@@ -26,6 +26,12 @@ spring:
       host: ${REDIS_HOST:localhost}  # Redis 호스트 (Docker: redis 서비스명)
       port: ${REDIS_PORT:6379}       # Redis 포트
 
+# Phase 21: JWT 설정
+jwt:
+  secret: ${JWT_SECRET:channel-manager-jwt-secret-key-for-development-only-min-256-bits-long}  # HMAC-SHA256 서명 키 (최소 256비트)
+  expiration-ms: ${JWT_EXPIRATION:3600000}  # 토큰 만료 시간 (기본 1시간 = 3600000ms)
+  # 주의: 프로덕션에서는 환경변수 JWT_SECRET으로 강력한 랜덤 키를 주입해야 한다
+
 # Phase 17: Rate Limiting 설정
 rate-limit:
   capacity: ${RATE_LIMIT_CAPACITY:50}          # 버킷 최대 용량 (기본 50/초)

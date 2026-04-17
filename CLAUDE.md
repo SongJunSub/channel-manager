@@ -197,6 +197,19 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 21 - Spring Security + JWT 인증 ✅
+- 개념 MD 작성 (phase21-security-jwt.md)
+- spring-boot-starter-security + jjwt 0.12.6 의존성 추가
+- V9 마이그레이션: users 테이블 (username, password BCrypt, role, enabled)
+- User 엔티티 + UserRepository (findByUsername)
+- JwtUtil: HMAC-SHA256 토큰 생성/검증/클레임 추출
+- JwtAuthenticationFilter: Authorization Bearer 토큰 → SecurityContext
+- SecurityConfig: 경로별 접근 제어 (공개/USER/ADMIN)
+- AuthController: POST /api/auth/register (201) + POST /api/auth/login
+- DataInitializer: 앱 시작 시 admin/user 샘플 계정 자동 생성 (BCrypt)
+- AuthDto: AuthRequest + AuthResponse (Kotlin data class / Java record)
+- TestSecurityConfig: 기존 22개 테스트 클래스에 보안 우회 적용
+
 ### Phase 20 - Kubernetes 배포 ✅
 - 개념 MD 작성 (phase20-kubernetes.md)
 - Kustomize 기반 K8s 매니페스트 (k8s/base/)

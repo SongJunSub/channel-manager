@@ -1,6 +1,7 @@
 package com.channelmanager.java.service; // 서비스 테스트 패키지
 
 import com.channelmanager.java.config.TestcontainersConfig; // Phase 13: Testcontainers 설정
+import com.channelmanager.java.config.TestSecurityConfig; // Phase 21: 테스트 보안 설정
 import com.channelmanager.java.domain.Inventory; // 재고 엔티티
 import com.channelmanager.java.dto.ReservationCreateRequest; // 예약 생성 요청 DTO
 import com.channelmanager.java.dto.ReservationResponse; // 예약 응답 DTO
@@ -33,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 정적 impo
 
 // 동시성 테스트 — Phase 4의 FOR UPDATE 비관적 잠금이 동시 예약에서 재고 정합성을 보장하는지 검증
 // Kotlin과 동일한 테스트 구조이지만, Java에서는 명시적 타입 선언과 메서드 호출을 사용한다
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TestSecurityConfig.class})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

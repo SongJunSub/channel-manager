@@ -31,6 +31,12 @@ dependencies {
     // === 구조화 로깅 (Phase 12) ===
     implementation("net.logstash.logback:logstash-logback-encoder:8.0")  // JSON 구조화 로그 인코더
 
+    // === Security + JWT (Phase 21) ===
+    implementation("org.springframework.boot:spring-boot-starter-security")     // Spring Security WebFlux
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")                          // JWT API
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")                            // JWT 구현체
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")                         // JWT Jackson 직렬화
+
     // === 모니터링 (Phase 19) ===
     implementation("org.springframework.boot:spring-boot-starter-actuator")  // Actuator 엔드포인트 (health, metrics 등)
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")              // Prometheus 메트릭 레지스트리

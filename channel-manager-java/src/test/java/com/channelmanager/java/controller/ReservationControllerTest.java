@@ -19,6 +19,7 @@ import org.junit.jupiter.api.TestMethodOrder; // 테스트 메서드 정렬 전�
 import org.springframework.beans.factory.annotation.Autowired; // 의존성 주입
 import org.springframework.boot.test.context.SpringBootTest; // 전체 애플리케이션 컨텍스트 로드
 import com.channelmanager.java.config.TestcontainersConfig;
+import com.channelmanager.java.config.TestSecurityConfig; // Phase 21: 테스트 보안 설정
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.server.LocalServerPort; // 랜덤 포트 주입
 import org.springframework.http.MediaType; // HTTP 미디어 타입
@@ -34,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 정적 impo
 // 테스트 전에 재고 데이터를 준비하고, 테스트 후에 생성된 예약/이벤트/재고를 정리한다
 // @TestInstance(PER_CLASS): @BeforeAll/@AfterAll에서 인스턴스 필드 접근 가능
 // Kotlin과 동일한 테스트 구조이지만, Java에서는 Lombok 없이 명시적으로 선언한다
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TestSecurityConfig.class})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

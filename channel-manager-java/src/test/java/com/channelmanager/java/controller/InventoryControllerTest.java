@@ -16,6 +16,7 @@ import org.junit.jupiter.api.TestMethodOrder; // 테스트 메서드 정렬 전�
 import org.springframework.beans.factory.annotation.Autowired; // 의존성 주입 어노테이션
 import org.springframework.boot.test.context.SpringBootTest; // 전체 애플리케이션 컨텍스트 로드
 import com.channelmanager.java.config.TestcontainersConfig;
+import com.channelmanager.java.config.TestSecurityConfig; // Phase 21: 테스트 보안 설정
 import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.server.LocalServerPort; // 랜덤 포트 주입 어노테이션
 import org.springframework.http.MediaType; // HTTP 미디어 타입 (Content-Type)
@@ -31,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat; // AssertJ 정적 impo
 // @TestMethodOrder(OrderAnnotation): @Order 어노테이션으로 테스트 실행 순서를 제어한다
 // @TestInstance(PER_CLASS): 테스트 클래스 인스턴스를 하나만 생성하여 @AfterAll에서 인스턴스 필드 접근 가능
 // Kotlin에서는 lateinit var로 지연 초기화하지만, Java에서는 일반 필드로 선언한다
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TestSecurityConfig.class})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

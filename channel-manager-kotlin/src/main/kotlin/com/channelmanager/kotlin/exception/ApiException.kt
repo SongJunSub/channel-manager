@@ -19,6 +19,10 @@ class NotFoundException(message: String) : ApiException(HttpStatus.NOT_FOUND, me
 // 예: 가용 수량이 음수, 종료일이 시작일보다 이전
 class BadRequestException(message: String) : ApiException(HttpStatus.BAD_REQUEST, message)
 
+// 401 Unauthorized - 인증 실패 (잘못된 ��용자명/비밀번호, 만료된 토큰)
+// Phase 21: 로그인 실패 시 사용
+class UnauthorizedException(message: String) : ApiException(HttpStatus.UNAUTHORIZED, message)
+
 // 409 Conflict - 중복 데이터 등 충돌이 발생했을 때 사용
 // 예: 동일 (roomTypeId, stockDate) 조합의 재고가 이미 존재
 class ConflictException(message: String) : ApiException(HttpStatus.CONFLICT, message)

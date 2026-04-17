@@ -1,6 +1,7 @@
 package com.channelmanager.kotlin.service // 서비스 테스트 패키지
 
 import com.channelmanager.kotlin.config.TestcontainersConfig // Phase 13: Testcontainers 설정
+import com.channelmanager.kotlin.config.TestSecurityConfig // Phase 21: 테스트 보안 설정
 import com.channelmanager.kotlin.domain.Inventory // 재고 엔티티
 import com.channelmanager.kotlin.domain.ReservationStatus // 예약 상태 enum
 import com.channelmanager.kotlin.dto.ReservationCreateRequest // 예약 생성 요청 DTO
@@ -31,7 +32,7 @@ import java.time.LocalDate // 날짜 타입
 // 동시성 테스트 — Phase 4의 FOR UPDATE 비관적 잠금이 동시 예약에서 재고 정합성을 보장하는지 검증
 // 여러 예약 요청을 동시에 발행하고, 최종 재고가 정확한지 확인한다
 // Flux.merge()로 동시 HTTP 요청을 발행하여 실제 동시성 환경을 시뮬레이션한다
-@Import(TestcontainersConfig::class)
+@Import(TestcontainersConfig::class, TestSecurityConfig::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
