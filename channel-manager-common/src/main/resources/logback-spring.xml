@@ -6,7 +6,9 @@
     <springProfile name="default">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
-                <pattern>%d{HH:mm:ss.SSS} %-5level [%X{requestId:---------}] %logger{36} - %msg%n</pattern>
+                <!-- Phase 22: traceId, spanId를 로그에 포함 — Zipkin UI에서 Trace ID로 로그 추적 가능 -->
+                <!-- %X{traceId:-}: MDC에 traceId가 있으면 출력, 없으면 빈 문자열 -->
+                <pattern>%d{HH:mm:ss.SSS} %-5level [%X{requestId:---------}] [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
             </encoder>
         </appender>
 

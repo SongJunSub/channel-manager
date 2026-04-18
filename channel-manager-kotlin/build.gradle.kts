@@ -43,6 +43,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")  // Actuator 엔드포인트 (health, metrics 등)
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")              // Prometheus 메트릭 레지스트리
 
+    // === 분산 추적 (Phase 22) ===
+    implementation("io.micrometer:micrometer-tracing-bridge-brave")          // Micrometer Tracing ↔ Brave 브릿지
+    implementation("io.zipkin.reporter2:zipkin-reporter-brave")              // Brave → Zipkin HTTP 리포터
+
     // === Rate Limiting (Phase 17) ===
     implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
 

@@ -197,6 +197,14 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 22 - 분산 추적 (Micrometer Tracing + Zipkin) ✅
+- 개념 MD 작성 (phase22-distributed-tracing.md)
+- micrometer-tracing-bridge-brave + zipkin-reporter-brave 의존성 추가
+- application.yml: tracing.sampling.probability=1.0, zipkin endpoint 환경변수화
+- logging.pattern.level: traceId, spanId 자동 포함
+- docker-compose.yml: Zipkin 3 서비스 추가 (:9411) + ZIPKIN_ENDPOINT 환경변수
+- 자동 계측: HTTP Server/Client, R2DBC, Redis, Reactor 체인
+
 ### Phase 21 - Spring Security + JWT 인증 ✅
 - 개념 MD 작성 (phase21-security-jwt.md)
 - spring-boot-starter-security + jjwt 0.12.6 의존성 추가

@@ -54,6 +54,18 @@ management:
     metrics:
       export:
         enabled: true  # Prometheus 메트릭 내보내기 활성화
+  # Phase 22: 분산 추적 (Micrometer Tracing + Zipkin)
+  tracing:
+    sampling:
+      probability: 1.0  # 100% 샘플링 (개발환경, 프로덕션에서는 0.1 권장)
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}  # Zipkin 수집 엔드포인트
+
+# Phase 22: 로그에 traceId, spanId 자동 포함 (Brave SLF4J 연동)
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"  # traceId, spanId를 로그 레벨에 포함
 
 # Phase 11: SpringDoc OpenAPI 설정
 springdoc:
