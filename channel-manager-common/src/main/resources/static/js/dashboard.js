@@ -401,27 +401,112 @@ function clearEvents() {
 }
 
 // ==============================
-// 13. 페이지 초기화
+// 13. WebSocket 연결 (Phase 23)
+// ==============================
+// SSE와 동일한 이벤트를 WebSocket(ws://)으로 수신하는 대안 연결 방식
+// 양방향 통신이 가능하며, 클라이언트→서버 메시지도 전송할 수 있다
+// WebSocket은 브라우저 내장 API로 별도 라이브러리가 필요 없다
+
+// webSocket — WebSocket 연결 객체 (SSE와 택일하여 사용)
+let webSocket = null;
+// WebSocket 재연결 관리 — 지수 백오프 + 최대 재시도 횟수
+let wsRetryCount = 0;             // 현재 재시도 횟수
+const WS_MAX_RETRIES = 10;       // 최대 재시도 횟수
+const WS_BASE_DELAY = 3000;      // 기본 재연결 대기 시간 (3초)
+const WS_MAX_DELAY = 30000;      // 최대 재연결 대기 시간 (30초)
+
+// WebSocket 연결 함수
+// ws:// 프로토콜로 /ws/events 엔드포인트에 연결한다
+// 서버의 EventWebSocketHandler가 이벤트를 JSON으로 전송한다
+function connectWebSocket() {
+    // 기존 WebSocket이 열려있으면 먼저 닫는다 (소켓 누수 방지)
+    if (webSocket && (webSocket.readyState === WebSocket.OPEN || webSocket.readyState === WebSocket.CONNECTING)) {
+        webSocket.close();
+    }
+
+    // ws:// (또는 wss://) 프로토콜 사용 — HTTP가 아닌 WebSocket 프로토콜
+    // location.host: 현재 페이지의 호스트+포트 (예: localhost:8080)
+    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    webSocket = new WebSocket(protocol + '//' + location.host + '/ws/events');
+
+    // onopen — WebSocket 연결 수립 시
+    webSocket.onopen = function () {
+        wsRetryCount = 0; // 연결 성공 시 재시도 카운터 초기화
+        updateConnectionStatus('connected');
+        console.log('WebSocket 연결됨');
+    };
+
+    // onmessage — 서버로부터 메시지 수신 시
+    // SSE와 달리 WebSocket은 모든 메시지가 onmessage로 전달된다 (이벤트 타입 분기 없음)
+    // 서버가 JSON 문자열로 EventResponse를 전송한다
+    webSocket.onmessage = function (event) {
+        var data = JSON.parse(event.data);
+        var type = data.eventType; // EventResponse.eventType 필드로 이벤트 타입 구분
+        addEventRow(type, data);
+        incrementCounter(type);
+    };
+
+    // onerror — WebSocket 오류 발생 시
+    webSocket.onerror = function () {
+        updateConnectionStatus('disconnected');
+        console.error('WebSocket 오류 발생');
+    };
+
+    // onclose — WebSocket 연결 종료 시
+    // SSE와 달리 WebSocket은 자동 재연결하지 않으므로 수동으로 재연결한다
+    // 지수 백오프: 3초 → 6초 → 12초 → 24초 → 30초(최대) — 서버 부하 방지
+    webSocket.onclose = function (event) {
+        updateConnectionStatus('disconnected');
+        if (wsRetryCount < WS_MAX_RETRIES) {
+            // 지수 백오프 계산: baseDelay * 2^retryCount, 최대 maxDelay
+            var delay = Math.min(WS_MAX_DELAY, WS_BASE_DELAY * Math.pow(2, wsRetryCount));
+            wsRetryCount++;
+            console.log('WebSocket 연결 종료 — ' + (delay / 1000) + '초 후 재연결 시도 (' + wsRetryCount + '/' + WS_MAX_RETRIES + ')');
+            setTimeout(connectWebSocket, delay);
+        } else {
+            console.error('WebSocket 최대 재시도 횟수 초과 — 재연결 중지');
+        }
+    };
+}
+
+// ==============================
+// 14. 연결 방식 전환 (SSE ↔ WebSocket)
+// ==============================
+// URL 쿼리 파라미터로 연결 방식을 선택할 수 있다
+// ?mode=ws → WebSocket 사용
+// ?mode=sse 또는 기본값 → SSE 사용 (기존 동작 유지)
+function getConnectionMode() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('mode') || 'sse'; // 기본값: SSE
+}
+
+// ==============================
+// 15. 페이지 초기화
 // ==============================
 // DOMContentLoaded — HTML 파싱이 완료된 후 실행된다
 // 이미지/CSS 로딩을 기다리지 않으므로 load 이벤트보다 빠르다
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. SSE 연결을 수립한다 — 실시간 이벤트 수신 시작
-    connectSSE();
+    // 1. 연결 방식에 따라 SSE 또는 WebSocket 연결 수립
+    var mode = getConnectionMode();
+    if (mode === 'ws') {
+        connectWebSocket(); // Phase 23: WebSocket 연결
+    } else {
+        connectSSE();       // Phase 5: SSE 연결 (기본)
+    }
 
     // 2. 시뮬레이터 현재 상태를 조회한다
     loadSimulatorStatus();
 
     // 3. 최근 이벤트를 로드하여 테이블에 표시한다
-    // SSE는 구독 이후의 이벤트만 수신하므로, 과거 이벤트는 REST API로 로드한다
     loadRecentEvents();
 });
 
-// beforeunload — 페이지를 떠날 때 SSE 연결을 정리한다
-// 브라우저 탭 닫기, 새로고침, 다른 페이지로 이동 시 호출된다
-// SSE 연결을 명시적으로 닫아 서버 리소스를 해제한다
+// beforeunload — 페이지를 떠날 때 연결을 정리한다
 window.addEventListener('beforeunload', function () {
     if (eventSource) {
         eventSource.close(); // SSE 연결 종료
+    }
+    if (webSocket) {
+        webSocket.close();   // WebSocket 연결 종료
     }
 });

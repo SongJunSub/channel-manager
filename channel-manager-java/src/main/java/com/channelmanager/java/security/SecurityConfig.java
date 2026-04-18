@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .pathMatchers("/css/**", "/js/**").permitAll()  // 정적 리소스
                 .pathMatchers("/").permitAll()                  // 루트 경로
                 .pathMatchers("/api/events/stream").permitAll() // SSE 스트림 (장기 연결)
+                .pathMatchers("/ws/**").permitAll()             // Phase 23: WebSocket 엔드포인트
                 // ADMIN 전용 경로
                 .pathMatchers("/api/simulator/**").hasRole("ADMIN") // 시뮬레이터 제어
                 // 인증된 사용자 (USER 또는 ADMIN)

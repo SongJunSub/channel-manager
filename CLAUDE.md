@@ -197,6 +197,15 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 23 - WebSocket 실시간 양방향 통신 ✅
+- 개념 MD 작성 (phase23-websocket.md)
+- EventWebSocketHandler: EventPublisher(Sinks)를 WebSocket으로 브로드캐스트 (Kotlin + Java)
+- WebSocketConfig: SimpleUrlHandlerMapping(/ws/events) + WebSocketHandlerAdapter
+- SecurityConfig: /ws/** permitAll() 추가
+- RateLimitFilter: /ws 경로 제외 추가
+- 대시보드 JS: WebSocket 연결 옵션 추가 (?mode=ws로 전환, 자동 재연결)
+- 기존 SSE 방식 유지 (기본값), WebSocket은 대안 연결 방식
+
 ### Phase 22 - 분산 추적 (Micrometer Tracing + Zipkin) ✅
 - 개념 MD 작성 (phase22-distributed-tracing.md)
 - micrometer-tracing-bridge-brave + zipkin-reporter-brave 의존성 추가
