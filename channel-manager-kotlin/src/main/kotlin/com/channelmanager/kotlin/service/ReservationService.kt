@@ -1,6 +1,8 @@
 package com.channelmanager.kotlin.service // 서비스 패키지 - 비즈니스 로직 계층
 
 import com.channelmanager.kotlin.domain.ChannelEvent // 채널 이벤트 엔티티
+import com.channelmanager.kotlin.dto.ReservationEventMessage // Phase 25: Kafka 메시지 DTO
+import com.channelmanager.kotlin.kafka.KafkaEventProducer // Phase 25: Kafka Producer
 import io.micrometer.core.instrument.MeterRegistry // Phase 19: Micrometer 메트릭 등록소
 import org.slf4j.LoggerFactory // SLF4J 로거 팩토리
 import com.channelmanager.kotlin.domain.EventType // 이벤트 타입 enum
@@ -34,7 +36,8 @@ class ReservationService(
     private val channelEventRepository: ChannelEventRepository,   // 이벤트 DB 접근
     private val eventPublisher: EventPublisher,                   // Phase 4: 이벤트 발행 서비스
     private val cacheService: CacheService,                        // Phase 18: Redis 캐시 무효화
-    private val meterRegistry: MeterRegistry                      // Phase 19: Micrometer 메트릭 등록소
+    private val meterRegistry: MeterRegistry,                     // Phase 19: Micrometer 메트릭 등록소
+    private val kafkaEventProducer: KafkaEventProducer            // Phase 25: Kafka 이벤트 발행
 ) {
     // SLF4J 로거
     companion object {
@@ -192,16 +195,28 @@ class ReservationService(
                             .map { reservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(reservation, channel.channelCode)
                             }
-                            .doOnNext { response -> // Phase 18+19: 예약 생성 후 캐시 무효화 + 메트릭 기록
+                            .doOnNext { response -> // Phase 18+19+25: 예약 생성 후 캐시 무효화 + 메트릭 + Kafka
                                 // Phase 18: 통계 캐시 무효화
                                 cacheService.evictStatisticsCache()
                                     .subscribe(null) { e -> log.warn("캐시 무효화 실패", e) }
-                                // Phase 19: 예약 생성 카운터 증가 (채널별 태그 포함)
-                                // Prometheus에서 reservations_created_total{channel="BOOKING"} 로 조회 가능
+                                // Phase 19: 예약 생성 카운터 증가
                                 meterRegistry.counter(
-                                    "reservations.created", // 메트릭 이름
-                                    "channel", channel.channelCode // 채널 태그
+                                    "reservations.created",
+                                    "channel", channel.channelCode
                                 ).increment()
+                                // Phase 25: Kafka에 예약 생성 이벤트 발행
+                                kafkaEventProducer.publishReservationEvent(
+                                    ReservationEventMessage(
+                                        eventType = "RESERVATION_CREATED",
+                                        reservationId = response.id,
+                                        channelCode = channel.channelCode,
+                                        guestName = response.guestName,
+                                        roomTypeId = response.roomTypeId,
+                                        checkInDate = response.checkInDate,
+                                        checkOutDate = response.checkOutDate,
+                                        totalPrice = response.totalPrice
+                                    )
+                                )
                             }
                     }
             }
@@ -274,15 +289,28 @@ class ReservationService(
                             .map { cancelledReservation -> // 7단계: DTO 변환
                                 ReservationResponse.from(cancelledReservation, channel.channelCode)
                             }
-                            .doOnNext { response -> // Phase 18+19: 예약 취소 후 캐시 무효화 + 메트릭 기록
+                            .doOnNext { response -> // Phase 18+19+25: 예약 취소 후 캐시 무효화 + 메트릭 + Kafka
                                 // Phase 18: 통계 캐시 무효화
                                 cacheService.evictStatisticsCache()
                                     .subscribe(null) { e -> log.warn("캐시 무효화 실패", e) }
-                                // Phase 19: 예약 취소 카운터 증가 (채널별 태그 포함)
+                                // Phase 19: 예약 취소 카운터 증가
                                 meterRegistry.counter(
                                     "reservations.cancelled",
                                     "channel", channel.channelCode
                                 ).increment()
+                                // Phase 25: Kafka에 예약 취소 이벤트 발행
+                                kafkaEventProducer.publishReservationEvent(
+                                    ReservationEventMessage(
+                                        eventType = "RESERVATION_CANCELLED",
+                                        reservationId = response.id,
+                                        channelCode = channel.channelCode,
+                                        guestName = response.guestName,
+                                        roomTypeId = response.roomTypeId,
+                                        checkInDate = response.checkInDate,
+                                        checkOutDate = response.checkOutDate,
+                                        totalPrice = response.totalPrice
+                                    )
+                                )
                             }
                     }
             }

@@ -27,6 +27,9 @@ x-app-common: &app-common
     REDIS_PORT: 6379                               # Redis 포트
     # Zipkin 분산 추적 (Phase 22)
     ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans  # Zipkin 수집 엔드포인트
+    # Kafka (Phase 25)
+    KAFKA_BOOTSTRAP_SERVERS: kafka:29092               # Kafka 브로커 (Docker 내부 포트)
+    KAFKA_LISTENER_ENABLED: "true"                    # Docker에서는 Kafka Consumer 활성화
   depends_on:
     postgres:
       condition: service_healthy                   # postgres가 healthy일 때만 시작
@@ -34,6 +37,8 @@ x-app-common: &app-common
       condition: service_healthy                   # redis가 healthy일 때만 시작
     zipkin:
       condition: service_healthy                   # Phase 22: zipkin이 healthy일 때만 시작
+    kafka:
+      condition: service_healthy                   # Phase 25: kafka가 healthy일 때만 시작
   restart: on-failure                              # 비정상 종료 시 자동 재시작
 
 services:
@@ -115,6 +120,35 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Kafka — 메시지 큐 (Phase 25, KRaft 모드 — Zookeeper 불필요)
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: apache/kafka:3.9.0                        # Apache Kafka 공식 이미지 (KRaft)
+    container_name: channel-manager-kafka             # 컨테이너 이름
+    ports:
+      - "9092:9092"                                  # 호스트 접근용 포트 (외부)
+    environment:
+      # KRaft 모드 설정 (Zookeeper 없이 단독 실행)
+      KAFKA_NODE_ID: 1                               # 노드 ID
+      KAFKA_PROCESS_ROLES: broker,controller          # 브로커 + 컨트롤러 역할 (단일 노드)
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093   # 컨트롤러 투표자
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER    # 컨트롤러 리스너
+      # 리스너 설정 — 내부(Docker)와 외부(호스트) 각각 별도 포트
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT    # 브로커 간 통신 리스너
+      # 토픽 기본 설정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1      # 단일 브로커이므로 복제 팩터 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"        # 토픽 자동 생성 허용
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:29092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s                              # Kafka 시작에 시간이 걸림
 
   # ---------------------------------------------------------------------------
   # Prometheus — 메트릭 수집 및 시계열 DB (Phase 19)

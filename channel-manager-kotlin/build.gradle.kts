@@ -47,6 +47,10 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing-bridge-brave")          // Micrometer Tracing ↔ Brave 브릿지
     implementation("io.zipkin.reporter2:zipkin-reporter-brave")              // Brave → Zipkin HTTP 리포터
 
+    // === Kafka (Phase 25) ===
+    implementation("org.springframework.kafka:spring-kafka")                    // Spring Kafka 기본
+    // reactor-kafka는 현재 kafka-clients 4.x와 호환되지 않아 spring-kafka만 사용한다
+
     // === Rate Limiting (Phase 17) ===
     implementation("com.bucket4j:bucket4j_jdk17-core:8.16.1")  // Token Bucket 알고리즘 인메모리 구현 (JDK 17+)
 

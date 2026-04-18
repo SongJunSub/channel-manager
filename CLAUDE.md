@@ -197,6 +197,16 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 25 - Kafka 메시지 큐 연동 ✅
+- 개념 MD 작성 (phase25-kafka.md)
+- spring-kafka + reactor-kafka 의존성 추가
+- KafkaEventProducer: 예약 생성/취소 시 reservation-events 토픽에 발행
+- KafkaEventConsumer: @KafkaListener로 메시지 수신 + 로그 기록
+- ReservationEventMessage: Kafka 메시지 DTO (key=channelCode, value=JSON)
+- ReservationService: doOnNext에서 KafkaEventProducer 호출 추가
+- docker-compose: Apache Kafka 3.9 KRaft 모드 서비스 추가 (Zookeeper 불필요)
+- application.yml: Kafka bootstrap-servers, producer/consumer serializer 설정
+
 ### Phase 24 - 이벤트 소싱 + CQRS ✅
 - 개념 MD 작성 (phase24-event-sourcing-cqrs.md)
 - V10 마이그레이션: inventory_events 테이블 (이벤트 저장소)

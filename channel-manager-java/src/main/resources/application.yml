@@ -32,6 +32,20 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION:3600000}  # 토큰 만료 시간 (기본 1시간 = 3600000ms)
   # 주의: 프로덕션에서는 환경변수 JWT_SECRET으로 강력한 랜덤 키를 주입해야 한다
 
+# Phase 25: Kafka 설정
+spring.kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}  # Kafka 브로커 주소
+  producer:
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  listener:
+    auto-startup: ${KAFKA_LISTENER_ENABLED:false}                               # 기본 비활성화 (Docker에서 true로 활성화)
+  consumer:
+    group-id: ${spring.application.name}
+    auto-offset-reset: earliest
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
 # Phase 17: Rate Limiting 설정
 rate-limit:
   capacity: ${RATE_LIMIT_CAPACITY:50}          # 버킷 최대 용량 (기본 50/초)
