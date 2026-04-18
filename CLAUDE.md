@@ -197,6 +197,15 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 24 - 이벤트 소싱 + CQRS ✅
+- 개념 MD 작성 (phase24-event-sourcing-cqrs.md)
+- V10 마이그레이션: inventory_events 테이블 (이벤트 저장소)
+- InventoryEvent 엔티티 + InventoryEventRepository (이벤트 조회/저장)
+- InventoryCommandService: 재고 조정/초기화 이벤트 저장 (쓰기 모델)
+- InventoryQueryService: 이벤트 재생으로 현재 상태 계산 (읽기 모델)
+- InventoryEventController: CQRS API (adjust, history, events, snapshot)
+- 이벤트 재생: delta 합산으로 가용 수량 계산 (fold/reduce)
+
 ### Phase 23 - WebSocket 실시간 양방향 통신 ✅
 - 개념 MD 작성 (phase23-websocket.md)
 - EventWebSocketHandler: EventPublisher(Sinks)를 WebSocket으로 브로드캐스트 (Kotlin + Java)
