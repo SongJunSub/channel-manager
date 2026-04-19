@@ -47,6 +47,10 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing-bridge-brave")          // Micrometer Tracing ↔ Brave 브릿지
     implementation("io.zipkin.reporter2:zipkin-reporter-brave")              // Brave → Zipkin HTTP 리포터
 
+    // === Resilience4j (Phase 27) ===
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")   // Resilience4j Spring Boot 통합
+    implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")        // Resilience4j Reactor 연산자
+
     // === GraphQL (Phase 26) ===
     implementation("org.springframework.boot:spring-boot-starter-graphql")      // Spring for GraphQL
 

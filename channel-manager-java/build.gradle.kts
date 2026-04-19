@@ -49,6 +49,10 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")                    // Spring Kafka 기본
     // reactor-kafka는 현재 kafka-clients 4.x와 호환되지 않아 spring-kafka만 사용한다
 
+    // === Resilience4j (Phase 27) ===
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.3.0")   // Resilience4j Spring Boot 통합
+    implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")        // Resilience4j Reactor 연산자
+
     // === GraphQL (Phase 26) ===
     implementation("org.springframework.boot:spring-boot-starter-graphql")      // Spring for GraphQL
 

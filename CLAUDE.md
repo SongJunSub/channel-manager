@@ -197,6 +197,15 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 27 - Resilience4j 서킷 브레이커 ✅
+- 개념 MD 작성 (phase27-circuit-breaker.md)
+- resilience4j-spring-boot3 + resilience4j-reactor 의존성 추가
+- ResilienceConfig: CircuitBreaker + Retry 빈 (상태 전이/재시도 이벤트 로깅)
+- ChannelSimulator: WebClient.post()에 CircuitBreakerOperator + RetryOperator 적용
+- 서킷 브레이커: 10건 슬라이딩 윈도우, 실패율 50%, OPEN 10초, HALF_OPEN 3건
+- 재시도: 최대 3회, 1초 간격
+- 폴백: onErrorResume으로 최종 실패 시 로그 후 계속
+
 ### Phase 26 - GraphQL API ✅
 - 개념 MD 작성 (phase26-graphql.md)
 - spring-boot-starter-graphql 의존성 추가

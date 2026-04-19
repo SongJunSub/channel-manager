@@ -46,6 +46,22 @@ spring.kafka:
     key-deserializer: org.apache.kafka.common.serialization.StringDeserializer  # 키 역직렬화
     value-deserializer: org.apache.kafka.common.serialization.StringDeserializer # 값 역직렬화
 
+# Phase 27: Resilience4j 서킷 브레이커 설정
+resilience4j:
+  circuitbreaker:
+    instances:
+      reservationApi:                          # 시뮬레이터 WebClient 호출용 인스턴스
+        sliding-window-size: 10                # 최근 10번 호출 기준 실패율 계산
+        failure-rate-threshold: 50             # 실패율 50% 이상이면 OPEN
+        wait-duration-in-open-state: 10s       # OPEN 상태 10초 유지 후 HALF_OPEN
+        permitted-number-of-calls-in-half-open-state: 3  # HALF_OPEN에서 3번 시험
+        minimum-number-of-calls: 5             # 최소 5번 호출 후에 실패율 계산 시작
+  retry:
+    instances:
+      reservationApi:
+        max-attempts: 3                        # 최대 3회 시도 (1회 원본 + 2회 재시도)
+        wait-duration: 1s                      # 재시도 간 1초 대기
+
 # Phase 17: Rate Limiting 설정
 rate-limit:
   capacity: ${RATE_LIMIT_CAPACITY:50}          # 버킷 최대 용량 (기본 50/초)
