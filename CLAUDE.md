@@ -197,6 +197,15 @@ channel-manager/
 - 이미지 크기: Kotlin 181MB, Java 168MB
 - 동작 확인: `docker compose up -d` → 3개 컨테이너 정상 기동, API 응답 확인
 
+### Phase 26 - GraphQL API ✅
+- 개념 MD 작성 (phase26-graphql.md)
+- spring-boot-starter-graphql 의존성 추가
+- schema.graphqls: Query(reservation, reservations, statisticsSummary, channels) + Mutation(createReservation)
+- ReservationGraphqlController: @QueryMapping, @MutationMapping, @SchemaMapping (연관 채널)
+- GraphiQL IDE: /graphiql 접근 가능
+- SecurityConfig: /graphql, /graphiql permitAll 추가
+- 기존 REST API 유지 — GraphQL은 보완적 대안
+
 ### Phase 25 - Kafka 메시지 큐 연동 ✅
 - 개념 MD 작성 (phase25-kafka.md)
 - spring-kafka + reactor-kafka 의존성 추가

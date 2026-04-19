@@ -81,6 +81,14 @@ logging:
   pattern:
     level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"  # traceId, spanId를 로그 레벨에 포함
 
+# Phase 26: GraphQL 설정
+spring.graphql:
+  graphiql:
+    enabled: true              # GraphiQL IDE 활성화 (브라우저에서 /graphiql로 접근)
+  schema:
+    printer:
+      enabled: true            # 스키마 텍스트 출력 엔드포인트 활성화
+
 # Phase 11: SpringDoc OpenAPI 설정
 springdoc:
   api-docs:

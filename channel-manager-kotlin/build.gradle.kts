@@ -47,6 +47,9 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing-bridge-brave")          // Micrometer Tracing ↔ Brave 브릿지
     implementation("io.zipkin.reporter2:zipkin-reporter-brave")              // Brave → Zipkin HTTP 리포터
 
+    // === GraphQL (Phase 26) ===
+    implementation("org.springframework.boot:spring-boot-starter-graphql")      // Spring for GraphQL
+
     // === Kafka (Phase 25) ===
     implementation("org.springframework.kafka:spring-kafka")                    // Spring Kafka 기본
     // reactor-kafka는 현재 kafka-clients 4.x와 호환되지 않아 spring-kafka만 사용한다

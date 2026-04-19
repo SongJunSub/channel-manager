@@ -1,0 +1,74 @@
+# =============================================================================
+# Channel Manager GraphQL 스키마 (Phase 26)
+# =============================================================================
+# SDL (Schema Definition Language)로 API 타입과 연산을 정의한다
+# Spring for GraphQL이 이 파일을 자동으로 로드하여 GraphQL 엔진에 등록한다
+# REST API와 달리 클라이언트가 필요한 필드만 선택하여 조회할 수 있다
+# =============================================================================
+
+# 예약 타입 — reservations 테이블과 매핑
+type Reservation {
+    id: ID!                    # 예약 ID (Non-null)
+    channelId: ID!             # 채널 ID (Long → ID, 범위 안전)
+    roomTypeId: ID!            # 객실 타입 ID (Long → ID)
+    guestName: String!         # 투숙객 이름
+    checkInDate: String!       # 체크인 날짜 (ISO-8601 문자열)
+    checkOutDate: String!      # 체크아웃 날짜
+    roomQuantity: Int!         # 객실 수
+    totalPrice: Float          # 총 금액
+    status: String!            # 예약 상태 (CONFIRMED, CANCELLED)
+    channel: Channel           # 연관 채널 — @SchemaMapping으로 리졸브
+}
+
+# 채널 타입 — channels 테이블과 매핑
+type Channel {
+    id: ID!                    # 채널 ID
+    channelCode: String!       # 채널 코드 (DIRECT, BOOKING 등)
+    channelName: String!       # 채널 표시명 (자사 홈페이지, Booking.com 등)
+    isActive: Boolean!         # 활성화 여부
+}
+
+# 전체 요약 통계 — StatisticsService.getSummaryStatistics()와 매핑
+type StatisticsSummary {
+    totalReservations: String!  # 전체 예약 수 (Long → String, 범위 안전)
+    confirmedCount: String!    # 확정 예약 수
+    cancelledCount: String!    # 취소 예약 수
+    totalRevenue: Float!       # 총 매출
+    totalEvents: String!       # 전체 이벤트 수 (Long → String)
+    activeChannels: String!    # 활성 채널 수
+}
+
+# 예약 생성 입력 타입 — Mutation의 인자로 사용
+input CreateReservationInput {
+    channelCode: String!       # 채널 코드
+    roomTypeId: ID!            # 객실 타입 ID (Long → ID)
+    checkInDate: String!       # 체크인 날짜 (ISO-8601)
+    checkOutDate: String!      # 체크아웃 날짜
+    guestName: String!         # 투숙객 이름
+    roomQuantity: Int!         # 객실 수
+}
+
+# =============================================================================
+# Query — 읽기 연산 (REST의 GET에 대응)
+# =============================================================================
+type Query {
+    # 예약 단건 조회 — GET /api/reservations/{id}에 대응
+    reservation(id: ID!): Reservation
+
+    # 전체 예약 목록 — GET /api/reservations에 대응
+    reservations: [Reservation!]!
+
+    # 전체 요약 통계 — GET /api/statistics/summary에 대응
+    statisticsSummary: StatisticsSummary!
+
+    # 채널 목록 — 채널 정보 조회
+    channels: [Channel!]!
+}
+
+# =============================================================================
+# Mutation — 쓰기 연산 (REST의 POST/PUT/DELETE에 대응)
+# =============================================================================
+type Mutation {
+    # 예약 생성 — POST /api/reservations에 대응
+    createReservation(input: CreateReservationInput!): Reservation!
+}

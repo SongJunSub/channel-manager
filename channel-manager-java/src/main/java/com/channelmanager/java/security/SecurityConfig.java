@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .pathMatchers("/v3/api-docs/**").permitAll()    // OpenAPI 스펙
                 .pathMatchers("/swagger-ui/**").permitAll()     // Swagger UI
                 .pathMatchers("/swagger-ui.html").permitAll()   // Swagger UI 리다이렉트
+                .pathMatchers("/graphql").permitAll()           // Phase 26: GraphQL 엔드포인트
+                .pathMatchers("/graphiql").permitAll()          // Phase 26: GraphiQL IDE
                 .pathMatchers("/index.html").permitAll()        // 대시보드
                 .pathMatchers("/css/**", "/js/**").permitAll()  // 정적 리소스
                 .pathMatchers("/").permitAll()                  // 루트 경로
